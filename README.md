@@ -28,8 +28,8 @@ React (Vite, :5173)  <-->  FastAPI (:8000)  <-->  Claude API
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/ice-ice-bear/trading-agentc.git
-cd trading-agentc
+git clone https://github.com/ice-ice-bear/trading-agent.git
+cd trading-agent
 ```
 
 ### 2. Configure environment variables
@@ -99,7 +99,7 @@ Open http://localhost:5173 and try:
 ## Project Structure
 
 ```
-trading-agentc/
+trading-agent/
 ├── README.md
 ├── Makefile                             # Project automation
 ├── backend/                             # FastAPI backend
