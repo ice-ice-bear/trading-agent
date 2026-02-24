@@ -1,0 +1,92 @@
+# ========================================
+# Environment & Credentials (CRITICAL)
+# ========================================
+.env
+.env.*
+!.env.example
+!.env.*.example
+kis_devlp.yaml
+
+# ========================================
+# Python
+# ========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+wheels/
+.Python
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# ========================================
+# Node.js
+# ========================================
+node_modules/
+dist/
+dist-ssr/
+*.local
+.npm
+.eslintcache
+
+# ========================================
+# Logs & Runtime
+# ========================================
+.logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+.pids/
+*.pid
+*.seed
+
+# ========================================
+# Databases
+# ========================================
+*.db
+*.sqlite
+*.sqlite3
+
+# ========================================
+# IDE & Editor
+# ========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ========================================
+# OS
+# ========================================
+.DS_Store
+Thumbs.db
+*.tmp
+
+# ========================================
+# Temporary & Build
+# ========================================
+tmp/
+temp/
+
+# ========================================
+# Claude Code local settings
+# ========================================
+.claude/

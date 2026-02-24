@@ -1,0 +1,14 @@
+[project]
+name = "kis-trading-webapp"
+version = "0.1.0"
+description = "KIS Trading Web App - LLM-based stock trading via Claude + MCP"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "anthropic>=0.42.0",
+    "fastmcp>=2.11.2",
+    "python-dotenv>=1.0.0",
+    "sse-starlette>=2.1.0",
+    "pydantic-settings>=2.6.0",
+]
