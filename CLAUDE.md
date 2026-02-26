@@ -33,6 +33,8 @@ make health         # Hit /health endpoint for MCP connection status
 make logs           # Tail all logs (.logs/mcp.log, backend.log, frontend.log)
 make logs-backend   # Tail backend log only
 make logs-mcp       # Tail MCP server log only
+make logs-frontend  # Tail frontend log only
+make clean          # Stop services + remove build artifacts and logs
 ```
 
 ### Running individual services
@@ -65,11 +67,11 @@ uv run uvicorn app.main:app --reload --port 8000
 
 **MCP client singleton** (`backend/app/services/mcp_client.py`): Manages a single persistent SSE connection to the MCP server. Safety feature: overrides `env_dv="real"` to `"demo"` to enforce paper trading only.
 
-**SSE streaming to frontend** (`backend/app/routers/chat.py`): The `/api/chat` endpoint returns SSE events: `tool_start` → `tool_executing` → `tool_result` → `text_delta` → `done`. The frontend reconstructs streaming text and tool call status from these events.
+**SSE streaming to frontend** (`backend/app/routers/chat.py`): The `/api/chat` endpoint returns SSE events: `tool_start` → `tool_executing` → `tool_result` → `text_delta` → `done` (see `chat.py` for current event types). The frontend reconstructs streaming text and tool call status from these events.
 
 **Session management**: In-memory dictionary (`session_id` → message history). Not persisted across restarts.
 
-**MCP server** (`open-trading-api/MCP/Kis Trading MCP/server.py`): FastMCP instance exposing 8 tool classes covering 166 KIS APIs (domestic stocks, bonds, derivatives, overseas stocks, ETF/ETN, ELW, auth). Tools use `ApiExecutor` base class in `tools/base.py`.
+**MCP server** (`open-trading-api/MCP/Kis Trading MCP/server.py`): FastMCP instance exposing 8 tool classes covering 100+ KIS APIs (domestic stocks, bonds, derivatives, overseas stocks, ETF/ETN, ELW, auth). Tools use `ApiExecutor` base class in `tools/base.py`.
 
 **Frontend** (`frontend/src/`): React 19 + TypeScript. `ChatView.tsx` handles SSE streaming. `MessageBubble.tsx` renders markdown with embedded `ToolIndicator` components. `Sidebar.tsx` manages sessions.
 
