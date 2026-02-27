@@ -35,18 +35,8 @@ cd trading-agent
 ### 2. Configure environment variables
 
 ```bash
-# Backend: set your Anthropic API key
-cp backend/.env.example backend/.env
-# Edit backend/.env and add your ANTHROPIC_API_KEY
-
-# MCP Server: set your KIS paper trading credentials
-cp open-trading-api/MCP/Kis\ Trading\ MCP/.env.paper.example \
-   open-trading-api/MCP/Kis\ Trading\ MCP/.env.paper
-# Edit .env.paper and add your KIS_PAPER_APP_KEY, KIS_PAPER_APP_SECRET, KIS_PAPER_STOCK
-
-# KIS API config (used by examples and legacy scripts)
-cp open-trading-api/kis_devlp.yaml.example open-trading-api/kis_devlp.yaml
-# Edit kis_devlp.yaml and fill in your credentials
+cp .env.example .env
+# Edit .env and fill in your ANTHROPIC_API_KEY and KIS paper trading credentials
 ```
 
 ### 3. Install dependencies and start
@@ -61,9 +51,7 @@ Open http://localhost:5173 and try:
 - "거래량 상위 종목" (Top stocks by volume)
 - "잔고 조회해줘" (Check balance)
 
-## Configuration
-
-### Backend (`backend/.env`)
+## Configuration (`.env`)
 
 | Variable | Description | Default |
 |---|---|---|
@@ -71,15 +59,10 @@ Open http://localhost:5173 and try:
 | `MCP_SERVER_URL` | MCP server SSE endpoint | `http://localhost:3000/sse` |
 | `CLAUDE_MODEL` | Claude model to use | `claude-sonnet-4-5-20250929` |
 | `CLAUDE_MAX_TOKENS` | Max response tokens | `4096` |
-
-### MCP Server (`open-trading-api/MCP/Kis Trading MCP/.env.paper`)
-
-| Variable | Description |
-|---|---|
-| `KIS_PAPER_APP_KEY` | Paper trading app key |
-| `KIS_PAPER_APP_SECRET` | Paper trading app secret |
-| `KIS_PAPER_STOCK` | Paper trading stock account number (8 digits) |
-| `KIS_PROD_TYPE` | Account product code (default: `01`) |
+| `KIS_PAPER_APP_KEY` | Paper trading app key | (required) |
+| `KIS_PAPER_APP_SECRET` | Paper trading app secret | (required) |
+| `KIS_PAPER_STOCK` | Paper trading stock account number (8 digits) | (required) |
+| `KIS_PROD_TYPE` | Account product code | `01` |
 
 ## Make Targets
 
@@ -102,9 +85,9 @@ Open http://localhost:5173 and try:
 trading-agent/
 ├── README.md
 ├── Makefile                             # Project automation
+├── .env.example                         # All environment variables
 ├── backend/                             # FastAPI backend
 │   ├── pyproject.toml
-│   ├── .env.example                     # Environment template
 │   └── app/
 │       ├── main.py                      # FastAPI app + lifespan
 │       ├── config.py                    # Settings from .env
@@ -128,10 +111,8 @@ trading-agent/
 │           ├── ToolIndicator.tsx        # Tool execution status
 │           └── Sidebar.tsx              # Session management
 └── open-trading-api/                    # KIS MCP server
-    ├── kis_devlp.yaml.example           # KIS credentials template
     └── MCP/Kis Trading MCP/
         ├── server.py                    # MCP server entry point
-        ├── .env.paper.example           # Paper trading config template
         └── tools/                       # 8 tools, 166 APIs
 ```
 

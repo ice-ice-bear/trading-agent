@@ -6,6 +6,9 @@ MCP_DIR := $(ROOT_DIR)/open-trading-api/MCP/Kis Trading MCP
 BACKEND_DIR := $(ROOT_DIR)/backend
 FRONTEND_DIR := $(ROOT_DIR)/frontend
 
+# Environment
+ENV_FILE := $(ROOT_DIR)/.env
+
 # Log files
 LOG_DIR := $(ROOT_DIR)/.logs
 MCP_LOG := $(LOG_DIR)/mcp.log
@@ -14,6 +17,14 @@ FRONTEND_LOG := $(LOG_DIR)/frontend.log
 
 # Load nvm if available
 NVM_INIT := export NVM_DIR="$$HOME/.nvm" && [ -s "$$NVM_DIR/nvm.sh" ] && . "$$NVM_DIR/nvm.sh"
+
+# Background launcher: use setsid on Linux, nohup on macOS
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+  BG_RUN := nohup
+else
+  BG_RUN := setsid
+endif
 
 # Helper: kill all processes on a given port
 define kill_port
@@ -46,13 +57,13 @@ start: stop
 	@mkdir -p $(LOG_DIR)
 	@echo "Starting all services..."
 	@echo ""
-	@cd "$(MCP_DIR)" && setsid env ENV=paper uv run python server.py > "$(MCP_LOG)" 2>&1 &
+	@cd "$(MCP_DIR)" && $(BG_RUN) env ENV_FILE="$(ENV_FILE)" uv run python server.py > "$(MCP_LOG)" 2>&1 &
 	@echo "  [1/3] MCP server starting on :3000..."
 	@sleep 3
-	@cd "$(BACKEND_DIR)" && setsid uv run uvicorn app.main:app --reload --port 8000 > "$(BACKEND_LOG)" 2>&1 &
+	@cd "$(BACKEND_DIR)" && $(BG_RUN) env ENV_FILE="$(ENV_FILE)" uv run uvicorn app.main:app --reload --port 8000 > "$(BACKEND_LOG)" 2>&1 &
 	@echo "  [2/3] Backend starting on :8000..."
 	@sleep 2
-	@$(NVM_INIT) && cd "$(FRONTEND_DIR)" && setsid npx vite --host > "$(FRONTEND_LOG)" 2>&1 &
+	@$(NVM_INIT) && cd "$(FRONTEND_DIR)" && $(BG_RUN) npx vite --host > "$(FRONTEND_LOG)" 2>&1 &
 	@echo "  [3/3] Frontend starting on :5173..."
 	@sleep 2
 	@echo ""
@@ -72,21 +83,21 @@ start: stop
 mcp:
 	@mkdir -p $(LOG_DIR)
 	@echo "Starting MCP server..."
-	@cd "$(MCP_DIR)" && setsid env ENV=paper uv run python server.py > "$(MCP_LOG)" 2>&1 &
+	@cd "$(MCP_DIR)" && $(BG_RUN) env ENV_FILE="$(ENV_FILE)" uv run python server.py > "$(MCP_LOG)" 2>&1 &
 	@sleep 2
 	@echo "  MCP server running on :3000"
 
 backend:
 	@mkdir -p $(LOG_DIR)
 	@echo "Starting backend..."
-	@cd "$(BACKEND_DIR)" && setsid uv run uvicorn app.main:app --reload --port 8000 > "$(BACKEND_LOG)" 2>&1 &
+	@cd "$(BACKEND_DIR)" && $(BG_RUN) env ENV_FILE="$(ENV_FILE)" uv run uvicorn app.main:app --reload --port 8000 > "$(BACKEND_LOG)" 2>&1 &
 	@sleep 2
 	@echo "  Backend running on :8000"
 
 frontend:
 	@mkdir -p $(LOG_DIR)
 	@echo "Starting frontend..."
-	@$(NVM_INIT) && cd "$(FRONTEND_DIR)" && setsid npx vite --host > "$(FRONTEND_LOG)" 2>&1 &
+	@$(NVM_INIT) && cd "$(FRONTEND_DIR)" && $(BG_RUN) npx vite --host > "$(FRONTEND_LOG)" 2>&1 &
 	@sleep 2
 	@echo "  Frontend running on :5173"
 
