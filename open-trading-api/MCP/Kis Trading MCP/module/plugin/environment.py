@@ -10,19 +10,28 @@ EnvironmentConfig = namedtuple('EnvironmentConfig', [
 ])
 
 
-def setup_environment(env: str) -> EnvironmentConfig:
-    # get api env
-    if not env:
-        logging.error("Environment variable ENV not defined")
-        exit(1)
+def setup_environment(env: str = None) -> EnvironmentConfig:
+    # Resolution order:
+    # 1. ENV_FILE env var (absolute path to .env file)
+    # 2. .env.{env} in current directory (legacy behavior)
+    # 3. Environment variables already set in the process
+    env_file = os.getenv("ENV_FILE")
 
-    # load .env
-    dotenv_path = os.path.join(os.getcwd(), f".env.{env}")
-    if not os.path.isfile(dotenv_path):
-        logging.error(f"Environment variable file .env.{env} not found")
-        exit(1)
-
-    load_dotenv(dotenv_path=dotenv_path)
+    if env_file:
+        if not os.path.isfile(env_file):
+            logging.error(f"Environment file not found: {env_file}")
+            exit(1)
+        load_dotenv(dotenv_path=env_file)
+        logging.info(f"Loaded environment from: {env_file}")
+    elif env:
+        dotenv_path = os.path.join(os.getcwd(), f".env.{env}")
+        if not os.path.isfile(dotenv_path):
+            logging.error(f"Environment variable file .env.{env} not found")
+            exit(1)
+        load_dotenv(dotenv_path=dotenv_path)
+        logging.info(f"Loaded environment from: {dotenv_path}")
+    else:
+        logging.info("No env file specified; using process environment variables")
 
     # return environment
     # MCP_TYPE 검증 및 기본값 설정

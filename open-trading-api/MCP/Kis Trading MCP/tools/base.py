@@ -80,12 +80,10 @@ class ApiExecutor:
         for param_name, trenv_attr in matches:
             # 발견된 매핑을 그대로 사용 (완전 자동화!)
             trenv_value = f'ka._TRENV.{trenv_attr}'
-            
-            # 소문자 버전 (함수 파라미터)
+
+            # 발견된 원본 케이스만 사용 (대문자 자동 생성 제거 — param_name_set 매칭으로 검증됨)
             dynamic_mappings[param_name] = trenv_value
-            # 대문자 버전 (API 파라미터) 
-            dynamic_mappings[param_name.upper()] = trenv_value
-            
+
             discovered_mappings.append(f"{param_name}=xxx.{trenv_attr}")
         
         if discovered_mappings:
@@ -111,15 +109,31 @@ class ApiExecutor:
             code = re.sub(r"import sys\n", "", code)  # import sys도 제거
 
             # 2. 코드에서 함수명과 시그니처 추출
-            function_match = re.search(r'def\s+(\w+)\s*\((.*?)\):', code, re.DOTALL)
+            # -> ReturnType: 어노테이션이 있는 함수도 정확히 파싱
+            function_match = re.search(r'def\s+(\w+)\s*\((.*?)\)\s*(?:->.*?)?:', code, re.DOTALL)
             if not function_match:
                 raise Exception("코드에서 함수를 찾을 수 없습니다.")
 
             function_name = function_match.group(1)
             function_params = function_match.group(2)
 
+            # 함수 파라미터 이름을 정확한 set으로 파싱 (substring 매칭 방지)
+            # 먼저 인라인 코멘트 제거 (# 이후 내용에 쉼표가 있으면 파싱 오류 발생)
+            clean_params = re.sub(r'#[^\n]*', '', function_params)
+            param_name_set = set()
+            for p in clean_params.split(','):
+                p = p.strip()
+                # 타입 어노테이션 제거: "param: str" → "param"
+                if ':' in p:
+                    p = p.split(':')[0].strip()
+                # 기본값 제거: "param=value" → "param"
+                if '=' in p:
+                    p = p.split('=')[0].strip()
+                if p and p.isidentifier():
+                    param_name_set.add(p)
+
             # 3. 함수가 max_depth 파라미터를 받는지 확인
-            has_max_depth = 'max_depth' in function_params
+            has_max_depth = 'max_depth' in param_name_set
 
             # 4. 파라미터 조정
             adjusted_params = params.copy()
@@ -151,7 +165,7 @@ class ApiExecutor:
             }
 
             for param_name, correct_value in account_mappings.items():
-                if param_name in function_params:
+                if param_name in param_name_set:
                     if param_name in adjusted_params:
                         original_value = adjusted_params[param_name]
                         adjusted_params[param_name] = correct_value
@@ -161,7 +175,7 @@ class ApiExecutor:
                         print(f"[자동설정] {function_name} 함수에 {param_name}={correct_value} 설정")
 
             # 거래소ID구분코드 처리 (API 타입 기반 추론)
-            if 'excg_id_dvsn_cd' in function_params and 'excg_id_dvsn_cd' not in adjusted_params:
+            if 'excg_id_dvsn_cd' in param_name_set and 'excg_id_dvsn_cd' not in adjusted_params:
                 if api_type.startswith('domestic'):
                     adjusted_params['excg_id_dvsn_cd'] = '"KRX"'
                     print(f"[추론] 국내 API({api_type})로 판단하여 excg_id_dvsn_cd='KRX' 설정")
@@ -171,7 +185,7 @@ class ApiExecutor:
 
             # 5. 함수 호출 코드 생성 (ka.auth() - env_dv에 따라 분기)
             # env_dv 값에 따른 인증 방식 결정
-            env_dv = params.get('env_dv', 'real')
+            env_dv = params.get('env_dv', 'demo')
             if env_dv == 'demo':
                 auth_code = 'ka.auth("vps")'
                 print(f"[모의투자] {function_name} 함수에 ka.auth(\"vps\") 적용")
@@ -302,7 +316,7 @@ if __name__ == "__main__":
             # 1. 임시 디렉토리 생성
             # FastMCP Context에서 request_id 안전하게 가져오기
             try:
-                request_id = ctx.get_state(factory.CONTEXT_REQUEST_ID)
+                request_id = await ctx.get_state(factory.CONTEXT_REQUEST_ID)
             except:
                 request_id = "unknown"
             temp_dir = self._create_temp_directory(request_id)
