@@ -1,3 +1,5 @@
+import os
+
 from pydantic_settings import BaseSettings
 
 
@@ -7,7 +9,7 @@ class Settings(BaseSettings):
     claude_model: str = "claude-sonnet-4-5-20250929"
     claude_max_tokens: int = 4096
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    model_config = {"env_file": os.getenv("ENV_FILE", ".env"), "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
 settings = Settings()

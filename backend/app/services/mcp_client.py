@@ -75,10 +75,12 @@ class MCPClientManager:
         if not self._client or not self._connected:
             return "Error: MCP server not connected"
 
-        # Safety: if Claude sets env_dv to "real", override to "demo"
+        # Safety: override env_dv based on current trading mode
         if "params" in arguments and isinstance(arguments["params"], dict):
-            if arguments["params"].get("env_dv") == "real":
-                arguments["params"]["env_dv"] = "demo"
+            from app.services.runtime_settings import runtime_settings
+            if runtime_settings.get("trading_mode") == "demo":
+                if arguments["params"].get("env_dv") == "real":
+                    arguments["params"]["env_dv"] = "demo"
 
         try:
             logger.info(f"Calling MCP tool: {name} with args: {arguments}")
