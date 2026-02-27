@@ -4,6 +4,7 @@ export interface ChatMessage {
   content: string;
   toolCalls?: ToolCall[];
   isStreaming?: boolean;
+  timestamp?: number;
 }
 
 export interface ToolCall {
@@ -18,4 +19,10 @@ export interface Session {
   id: string;
   title: string;
   messageCount: number;
+}
+
+export interface AppSettings {
+  trading_mode: 'demo' | 'real';
+  claude_model: string;
+  claude_max_tokens: number;
 }

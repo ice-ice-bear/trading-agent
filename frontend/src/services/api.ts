@@ -62,7 +62,30 @@ export async function checkHealth(): Promise<{
   mcp_connected: boolean;
   mcp_tools_count: number;
   mcp_tools: string[];
+  trading_mode?: string;
+  claude_model?: string;
 }> {
   const res = await fetch('/health');
+  return res.json();
+}
+
+export async function getSettings(): Promise<import('../types').AppSettings> {
+  const res = await fetch('/api/settings');
+  if (!res.ok) throw new Error(`Failed to fetch settings: ${res.status}`);
+  return res.json();
+}
+
+export async function updateSettings(
+  patch: Partial<import('../types').AppSettings>
+): Promise<import('../types').AppSettings> {
+  const res = await fetch('/api/settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Failed to update settings');
+  }
   return res.json();
 }

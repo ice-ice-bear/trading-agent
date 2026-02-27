@@ -13,12 +13,18 @@ interface Props {
 export default function ChatView({ sessionId, messages, setMessages, onFirstMessage }: Props) {
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = useCallback((smooth = true) => {
+    if (smooth) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+    }
   }, []);
 
   useEffect(() => {
@@ -30,6 +36,12 @@ export default function ChatView({ sessionId, messages, setMessages, onFirstMess
     inputRef.current?.focus();
   }, [sessionId]);
 
+  const handleScroll = useCallback(() => {
+    if (!containerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+    setShowScrollBtn(scrollHeight - scrollTop - clientHeight > 200);
+  }, []);
+
   const handleSend = async () => {
     const trimmed = input.trim();
     if (!trimmed || isStreaming) return;
@@ -38,6 +50,7 @@ export default function ChatView({ sessionId, messages, setMessages, onFirstMess
       id: crypto.randomUUID(),
       role: 'user',
       content: trimmed,
+      timestamp: Date.now(),
     };
 
     if (messages.length === 0) {
@@ -50,6 +63,7 @@ export default function ChatView({ sessionId, messages, setMessages, onFirstMess
       content: '',
       toolCalls: [],
       isStreaming: true,
+      timestamp: Date.now(),
     };
 
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
@@ -145,16 +159,10 @@ export default function ChatView({ sessionId, messages, setMessages, onFirstMess
 
   return (
     <div className="chat-view">
-      <div className="messages-container">
+      <div className="messages-container" ref={containerRef} onScroll={handleScroll}>
         {messages.length === 0 && (
           <div className="welcome">
-            <div className="welcome-icon">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                <path d="M2 17l10 5 10-5" />
-                <path d="M2 12l10 5 10-5" />
-              </svg>
-            </div>
+            <div className="welcome-orb" />
             <h2>KIS Trading Assistant</h2>
             <p>한국투자증권 모의투자 AI 어시스턴트입니다.<br />주식 시세 조회, 매매 주문, 잔고 확인 등을 도와드립니다.</p>
             <div className="suggestions">
@@ -177,6 +185,13 @@ export default function ChatView({ sessionId, messages, setMessages, onFirstMess
           <MessageBubble key={msg.id} message={msg} />
         ))}
         <div ref={messagesEndRef} />
+        {showScrollBtn && (
+          <button className="scroll-to-bottom-btn" onClick={() => scrollToBottom(false)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        )}
       </div>
 
       <div className="input-bar">
