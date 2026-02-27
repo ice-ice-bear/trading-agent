@@ -31,7 +31,7 @@ function App() {
   const { theme, toggleTheme } = useTheme();
   const { settings, saveSettings, error: settingsError } = useSettings();
   const [currentView, setCurrentView] = useState<'chat' | 'settings'>('chat');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sessions, setSessions] = useState<Session[]>(
     () => loadFromStorage(STORAGE_KEYS.sessions, DEFAULT_SESSIONS)
   );
@@ -85,7 +85,6 @@ function App() {
   const handleNewChat = useCallback(() => {
     handleNewSession();
     setCurrentView('chat');
-    setSidebarOpen(false);
   }, [handleNewSession]);
 
   const handleFirstMessage = useCallback((sessionId: string, preview: string) => {

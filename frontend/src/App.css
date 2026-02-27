@@ -317,7 +317,8 @@
 .chat-view {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 .messages-container {
@@ -337,19 +338,41 @@
 }
 
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes orb-float {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-8px) scale(1.05); }
+
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-8px) scale(1.05);
+  }
 }
 
 @keyframes orb-gradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .welcome-orb {
@@ -410,6 +433,7 @@
     opacity: 0;
     transform: translateY(12px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -628,14 +652,22 @@
   animation: typing-glow 1.8s ease-in-out infinite;
 }
 
-.typing-indicator span:nth-child(2) { animation-delay: 0.3s; }
-.typing-indicator span:nth-child(3) { animation-delay: 0.6s; }
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.3s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.6s;
+}
 
 @keyframes typing-glow {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.3;
     box-shadow: 0 0 4px rgba(79, 70, 229, 0.2);
   }
+
   50% {
     opacity: 1;
     box-shadow: 0 0 12px rgba(79, 70, 229, 0.5);
@@ -653,7 +685,9 @@
 }
 
 @keyframes blink {
-  50% { opacity: 0; }
+  50% {
+    opacity: 0;
+  }
 }
 
 /* ===== Tool Indicators (Timeline) ===== */
@@ -753,7 +787,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .tool-input-params {
