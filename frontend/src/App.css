@@ -173,6 +173,8 @@
   border-bottom: 1px solid var(--color-border-light);
   flex-shrink: 0;
   height: 52px;
+  position: relative;
+  z-index: 20;
 }
 
 .header-title {
@@ -1071,7 +1073,8 @@
 .settings-view {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   background: var(--color-bg);
 }
 

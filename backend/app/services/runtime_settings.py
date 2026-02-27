@@ -12,8 +12,9 @@ SETTINGS_FILE = Path(__file__).parent.parent.parent / "settings.json"
 
 VALID_MODELS = [
     "claude-sonnet-4-5-20250929",
-    "claude-haiku-4-5-20250929",
-    "claude-opus-4-20250514",
+    "claude-haiku-4-5-20251001",
+    "claude-opus-4-5-20251101",
+    "claude-sonnet-4-6",
 ]
 
 DEFAULTS = {

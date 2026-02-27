@@ -10,9 +10,10 @@ interface Props {
 }
 
 const MODEL_OPTIONS = [
+  { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6', desc: '최신 최고 성능' },
   { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5', desc: '균형 잡힌 성능' },
-  { value: 'claude-haiku-4-5-20250929', label: 'Claude Haiku 4.5', desc: '빠른 응답' },
-  { value: 'claude-opus-4-20250514', label: 'Claude Opus 4', desc: '최고 성능' },
+  { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', desc: '빠른 응답' },
+  { value: 'claude-opus-4-5-20251101', label: 'Claude Opus 4.5', desc: '고도의 추론' },
 ];
 
 export default function SettingsView({ settings, onSave, error, onBack }: Props) {
