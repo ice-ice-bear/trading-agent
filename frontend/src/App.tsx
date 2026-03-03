@@ -129,21 +129,25 @@ function App() {
 
   return (
     <div className="app-layout">
-      <div
-        className={`sidebar-overlay ${sidebarOpen ? 'visible' : ''}`}
-        onClick={() => setSidebarOpen(false)}
-      />
-      <Sidebar
-        sessions={sessions}
-        activeSessionId={activeSessionId}
-        onSelectSession={handleSelectSession}
-        onNewSession={handleNewSession}
-        onDeleteSession={handleDeleteSession}
-        onOpenSettings={() => setCurrentView('settings')}
-        onOpenDashboard={() => setCurrentView('dashboard')}
-        currentView={currentView}
-        className={sidebarOpen ? 'open' : 'collapsed'}
-      />
+      {currentView !== 'dashboard' && (
+        <>
+          <div
+            className={`sidebar-overlay ${sidebarOpen ? 'visible' : ''}`}
+            onClick={() => setSidebarOpen(false)}
+          />
+          <Sidebar
+            sessions={sessions}
+            activeSessionId={activeSessionId}
+            onSelectSession={handleSelectSession}
+            onNewSession={handleNewSession}
+            onDeleteSession={handleDeleteSession}
+            onOpenSettings={() => setCurrentView('settings')}
+            onOpenDashboard={() => setCurrentView('dashboard')}
+            currentView={currentView}
+            className={sidebarOpen ? 'open' : 'collapsed'}
+          />
+        </>
+      )}
       <main className="main-content">
         <HeaderBar
           sessionTitle={activeSession?.title ?? '새 대화'}
