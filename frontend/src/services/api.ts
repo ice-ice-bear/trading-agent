@@ -89,3 +89,146 @@ export async function updateSettings(
   }
   return res.json();
 }
+
+// --- Dashboard API ---
+
+export async function getPortfolio(): Promise<import('../types').PortfolioData> {
+  const res = await fetch('/api/dashboard/portfolio');
+  if (!res.ok) throw new Error('Failed to fetch portfolio');
+  return res.json();
+}
+
+export async function getPositions(): Promise<{ positions: import('../types').Position[] }> {
+  const res = await fetch('/api/dashboard/positions');
+  if (!res.ok) throw new Error('Failed to fetch positions');
+  return res.json();
+}
+
+export async function getOrders(limit = 50): Promise<{ orders: import('../types').Order[]; total_count: number }> {
+  const res = await fetch(`/api/dashboard/orders?limit=${limit}`);
+  if (!res.ok) throw new Error('Failed to fetch orders');
+  return res.json();
+}
+
+// --- Agent API ---
+
+export async function getAgents(): Promise<{ agents: import('../types').Agent[] }> {
+  const res = await fetch('/api/agents');
+  if (!res.ok) throw new Error('Failed to fetch agents');
+  return res.json();
+}
+
+export async function runAgent(agentId: string): Promise<{ success: boolean; summary: string }> {
+  const res = await fetch(`/api/agents/${agentId}/run`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to run agent');
+  return res.json();
+}
+
+export async function enableAgent(agentId: string): Promise<void> {
+  await fetch(`/api/agents/${agentId}/enable`, { method: 'POST' });
+}
+
+export async function disableAgent(agentId: string): Promise<void> {
+  await fetch(`/api/agents/${agentId}/disable`, { method: 'POST' });
+}
+
+export async function getAgentLogs(agentId?: string, limit = 50): Promise<{ logs: import('../types').AgentLog[] }> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (agentId) params.set('agent_id', agentId);
+  const res = await fetch(`/api/agents/logs?${params}`);
+  if (!res.ok) throw new Error('Failed to fetch agent logs');
+  return res.json();
+}
+
+export async function getAgentEvents(limit = 100): Promise<{ events: import('../types').AgentEvent[] }> {
+  const res = await fetch(`/api/agents/events?limit=${limit}`);
+  if (!res.ok) throw new Error('Failed to fetch events');
+  return res.json();
+}
+
+// --- Watchlist API ---
+
+export async function getWatchlist(): Promise<{ items: import('../types').WatchlistItem[] }> {
+  const res = await fetch('/api/watchlist');
+  if (!res.ok) throw new Error('Failed to fetch watchlist');
+  return res.json();
+}
+
+export async function addToWatchlist(stockCode: string, stockName = ''): Promise<void> {
+  await fetch('/api/watchlist', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ stock_code: stockCode, stock_name: stockName }),
+  });
+}
+
+export async function removeFromWatchlist(stockCode: string): Promise<void> {
+  await fetch(`/api/watchlist/${stockCode}`, { method: 'DELETE' });
+}
+
+// --- Signal API ---
+
+export async function getSignals(status?: string, limit = 50): Promise<{ signals: import('../types').Signal[] }> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (status) params.set('status', status);
+  const res = await fetch(`/api/signals?${params}`);
+  if (!res.ok) throw new Error('Failed to fetch signals');
+  return res.json();
+}
+
+export async function approveSignal(signalId: number): Promise<void> {
+  const res = await fetch(`/api/signals/${signalId}/approve`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to approve signal');
+}
+
+export async function rejectSignal(signalId: number): Promise<void> {
+  const res = await fetch(`/api/signals/${signalId}/reject`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to reject signal');
+}
+
+// --- Report API ---
+
+export async function getReports(
+  reportType?: string,
+  limit = 20
+): Promise<{ reports: import('../types').Report[] }> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (reportType) params.set('report_type', reportType);
+  const res = await fetch(`/api/reports?${params}`);
+  if (!res.ok) throw new Error('Failed to fetch reports');
+  return res.json();
+}
+
+export async function deleteReport(reportId: number): Promise<{ success: boolean }> {
+  const res = await fetch(`/api/reports/${reportId}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete report');
+  return res.json();
+}
+
+export async function deleteReportsBulk(
+  reportType?: string,
+  all = false
+): Promise<{ success: boolean; deleted_count: number }> {
+  const params = new URLSearchParams();
+  if (all) params.set('all', 'true');
+  else if (reportType) params.set('report_type', reportType);
+  const res = await fetch(`/api/reports?${params}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete reports');
+  return res.json();
+}
+
+export async function generateReport(
+  reportType: 'daily' | 'weekly'
+): Promise<{ success: boolean; summary: string; report_id?: number }> {
+  const res = await fetch(`/api/reports/generate?report_type=${reportType}`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to generate report');
+  return res.json();
+}
+
+// --- Task API ---
+
+export async function getTasks(): Promise<{ tasks: import('../types').ScheduledTask[] }> {
+  const res = await fetch('/api/tasks');
+  if (!res.ok) throw new Error('Failed to fetch tasks');
+  return res.json();
+}

@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
-import type { ChatMessage, Session } from './types';
+import type { ChatMessage, Session, AppView } from './types';
 import { useTheme } from './hooks/useTheme';
 import { useSettings } from './hooks/useSettings';
 import Sidebar from './components/Sidebar';
 import HeaderBar from './components/HeaderBar';
 import ChatView from './components/ChatView';
 import SettingsView from './components/SettingsView';
+import DashboardView from './components/DashboardView';
 import './App.css';
 
 const STORAGE_KEYS = {
@@ -30,7 +31,7 @@ const DEFAULT_SESSIONS: Session[] = [
 function App() {
   const { theme, toggleTheme } = useTheme();
   const { settings, saveSettings, error: settingsError } = useSettings();
-  const [currentView, setCurrentView] = useState<'chat' | 'settings'>('chat');
+  const [currentView, setCurrentView] = useState<AppView>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sessions, setSessions] = useState<Session[]>(
     () => loadFromStorage(STORAGE_KEYS.sessions, DEFAULT_SESSIONS)
@@ -139,6 +140,8 @@ function App() {
         onNewSession={handleNewSession}
         onDeleteSession={handleDeleteSession}
         onOpenSettings={() => setCurrentView('settings')}
+        onOpenDashboard={() => setCurrentView('dashboard')}
+        currentView={currentView}
         className={sidebarOpen ? 'open' : 'collapsed'}
       />
       <main className="main-content">
@@ -149,6 +152,9 @@ function App() {
           theme={theme}
           onToggleTheme={toggleTheme}
           onOpenSettings={() => setCurrentView('settings')}
+          onOpenDashboard={() => setCurrentView('dashboard')}
+          onOpenChat={() => setCurrentView('chat')}
+          currentView={currentView}
           tradingMode={settings.trading_mode}
           onNewChat={handleNewChat}
         />
@@ -159,6 +165,8 @@ function App() {
             error={settingsError}
             onBack={() => setCurrentView('chat')}
           />
+        ) : currentView === 'dashboard' ? (
+          <DashboardView />
         ) : (
           <ChatView
             sessionId={activeSessionId}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { checkHealth } from '../services/api';
+import type { AppView } from '../types';
 
 interface Props {
   sessionTitle: string;
@@ -8,6 +9,9 @@ interface Props {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
   onOpenSettings: () => void;
+  onOpenDashboard: () => void;
+  onOpenChat: () => void;
+  currentView: AppView;
   tradingMode: 'demo' | 'real';
   onNewChat: () => void;
 }
@@ -19,6 +23,9 @@ export default function HeaderBar({
   theme,
   onToggleTheme,
   onOpenSettings,
+  onOpenDashboard,
+  onOpenChat,
+  currentView,
   tradingMode,
   onNewChat,
 }: Props) {
@@ -68,6 +75,30 @@ export default function HeaderBar({
           KIS Trading
         </button>
         <span className="header-session-title">{sessionTitle}</span>
+      </div>
+
+      <div className="header-nav-tabs">
+        <button
+          className={`header-nav-tab ${currentView === 'chat' ? 'active' : ''}`}
+          onClick={onOpenChat}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+          </svg>
+          Chat
+        </button>
+        <button
+          className={`header-nav-tab ${currentView === 'dashboard' ? 'active' : ''}`}
+          onClick={onOpenDashboard}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+          </svg>
+          Dashboard
+        </button>
       </div>
 
       <div className="header-right">

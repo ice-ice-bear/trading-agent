@@ -1,4 +1,4 @@
-import type { Session } from '../types';
+import type { Session, AppView } from '../types';
 
 interface Props {
   sessions: Session[];
@@ -7,6 +7,8 @@ interface Props {
   onNewSession: () => void;
   onDeleteSession: (id: string) => void;
   onOpenSettings: () => void;
+  onOpenDashboard: () => void;
+  currentView: AppView;
   className?: string;
 }
 
@@ -17,6 +19,8 @@ export default function Sidebar({
   onNewSession,
   onDeleteSession,
   onOpenSettings,
+  onOpenDashboard,
+  currentView,
   className,
 }: Props) {
   return (
@@ -72,6 +76,18 @@ export default function Sidebar({
         ))}
       </nav>
       <div className="sidebar-footer">
+        <button
+          className={`sidebar-nav-link ${currentView === 'dashboard' ? 'active' : ''}`}
+          onClick={onOpenDashboard}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+          </svg>
+          <span>대시보드</span>
+        </button>
         <button className="sidebar-settings-btn" onClick={onOpenSettings}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="3" />
