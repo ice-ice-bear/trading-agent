@@ -22,7 +22,10 @@ export default function PortfolioSummary({ data, loading }: Props) {
       <h3 className="card-title">Portfolio</h3>
       <div className="summary-grid">
         <div className="summary-item">
-          <span className="summary-label">Total</span>
+          <span className="summary-label">
+            Total
+            <i className="info-hint" data-tip="당일 매매 미반영 — KIS T+2 결제로 매수/매도 대금은 D+2 영업일에 예수금에 반영됩니다.">i</i>
+          </span>
           <span className="summary-value">{formatKRW(totalValue)}</span>
         </div>
         <div className="summary-item">
@@ -30,7 +33,10 @@ export default function PortfolioSummary({ data, loading }: Props) {
           <span className="summary-value summary-value--muted">{formatKRW(initialCapital)}</span>
         </div>
         <div className="summary-item">
-          <span className="summary-label">Cash</span>
+          <span className="summary-label">
+            Cash
+            <i className="info-hint" data-tip="예수금 총금액 기준. 당일 거래 대금은 T+2 영업일 후 반영됩니다.">i</i>
+          </span>
           <span className="summary-value">{formatKRW(cash)}</span>
         </div>
         <div className="summary-item">

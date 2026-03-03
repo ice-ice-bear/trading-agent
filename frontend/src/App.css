@@ -1839,6 +1839,54 @@
   font-size: 0.9em;
 }
 
+.info-hint {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+  color: var(--color-bg, #0f172a);
+  font-size: 9px;
+  font-style: normal;
+  text-align: center;
+  line-height: 13px;
+  cursor: help;
+  position: relative;
+  vertical-align: middle;
+  opacity: 0.6;
+}
+
+.info-hint::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.5;
+  width: 200px;
+  white-space: normal;
+  text-align: left;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 20;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.info-hint:hover {
+  opacity: 1;
+}
+
+.info-hint:hover::after {
+  opacity: 1;
+}
+
 /* Positions Table */
 .dashboard-table {
   width: 100%;
