@@ -5,7 +5,7 @@ import logging
 
 from app.agents.base import AgentContext, AgentResult, AgentRole, BaseAgent
 from app.agents.state import PortfolioCache, shared_state
-from app.models.db import execute_insert
+from app.models.db import execute_insert, execute_query
 
 logger = logging.getLogger(__name__)
 
@@ -94,9 +94,14 @@ class PortfolioMonitorAgent(BaseAgent):
             logger.warning(f"Balance parse partial failure: {e}, raw: {str(balance_raw)[:500]}")
 
         # Compute totals from positions if not available from summary
-        if total_value == 0 and positions:
+        if positions:
             total_market = sum(p.get("market_value", 0) for p in positions)
-            total_value = total_market + cash_balance
+            # Always recompute total_value from positions + cash for accuracy
+            if total_market > 0:
+                total_value = total_market + cash_balance
+        elif cash_balance > 0:
+            # No positions: total value equals cash balance
+            total_value = cash_balance
         if total_pnl == 0 and positions:
             total_pnl = sum(p.get("unrealized_pnl", 0) for p in positions)
 
@@ -129,6 +134,19 @@ class PortfolioMonitorAgent(BaseAgent):
                     pos.get("unrealized_pnl_pct", 0),
                 ),
             )
+
+        # Auto-set initial capital on first run
+        existing_ic = await execute_query(
+            "SELECT value FROM risk_config WHERE key = 'initial_capital'",
+            fetch_one=True,
+        )
+        if not existing_ic and cash_balance > 0:
+            await execute_query(
+                "INSERT INTO risk_config (key, value) VALUES ('initial_capital', ?) "
+                "ON CONFLICT(key) DO NOTHING",
+                (str(cash_balance),),
+            )
+            logger.info(f"Initial capital set: {cash_balance:,.0f}")
 
         # 4. Update shared state
         await shared_state.update_portfolio(

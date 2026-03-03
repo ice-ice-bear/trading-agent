@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from app.agents.engine import agent_engine
 from app.agents.base import AgentContext, AgentStatus
 from app.agents.event_bus import event_bus
+from app.models.db import execute_insert, execute_query
 from app.services import portfolio_service
 
 router = APIRouter(prefix="/api/agents", tags=["agents"])
@@ -13,6 +14,16 @@ router = APIRouter(prefix="/api/agents", tags=["agents"])
 
 class AgentConfigUpdate(BaseModel):
     config: dict
+
+
+class RiskConfigUpdate(BaseModel):
+    stop_loss_pct: float | None = None
+    take_profit_pct: float | None = None
+    max_positions: int | None = None
+    max_position_weight_pct: float | None = None
+    max_daily_loss: float | None = None
+    signal_approval_mode: str | None = None
+    initial_capital: float | None = None
 
 
 @router.get("")
@@ -36,6 +47,49 @@ async def get_agent_events(limit: int = Query(default=100, ge=1, le=1000)):
     """Get recent events from the event bus."""
     events = event_bus.get_history(limit)
     return {"events": events}
+
+
+@router.get("/risk-config")
+async def get_risk_config():
+    """Get current risk management configuration."""
+    rows = await execute_query("SELECT key, value FROM risk_config")
+    config = {row["key"]: row["value"] for row in rows} if rows else {}
+    return {
+        "stop_loss_pct": float(config.get("stop_loss_pct", -3.0)),
+        "take_profit_pct": float(config.get("take_profit_pct", 5.0)),
+        "max_positions": int(config.get("max_positions", 5)),
+        "max_position_weight_pct": float(config.get("max_position_weight_pct", 20.0)),
+        "max_daily_loss": float(config.get("max_daily_loss", 500000)),
+        "signal_approval_mode": config.get("signal_approval_mode", "auto"),
+        "initial_capital": float(config.get("initial_capital", 0)),
+    }
+
+
+@router.put("/risk-config")
+async def update_risk_config(body: RiskConfigUpdate):
+    """Update risk management configuration."""
+    patch = body.model_dump(exclude_none=True)
+    if not patch:
+        raise HTTPException(400, "No risk config values provided")
+
+    for key, value in patch.items():
+        await execute_query(
+            "INSERT INTO risk_config (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (key, str(value)),
+        )
+
+    rows = await execute_query("SELECT key, value FROM risk_config")
+    config = {row["key"]: row["value"] for row in rows} if rows else {}
+    return {
+        "stop_loss_pct": float(config.get("stop_loss_pct", -3.0)),
+        "take_profit_pct": float(config.get("take_profit_pct", 5.0)),
+        "max_positions": int(config.get("max_positions", 5)),
+        "max_position_weight_pct": float(config.get("max_position_weight_pct", 20.0)),
+        "max_daily_loss": float(config.get("max_daily_loss", 500000)),
+        "signal_approval_mode": config.get("signal_approval_mode", "auto"),
+        "initial_capital": float(config.get("initial_capital", 0)),
+    }
 
 
 @router.get("/{agent_id}")

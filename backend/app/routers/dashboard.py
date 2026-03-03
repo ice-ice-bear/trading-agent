@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Query
 
+from app.models.db import execute_query
 from app.services import portfolio_service
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
@@ -9,23 +10,37 @@ router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 @router.get("/portfolio")
 async def get_portfolio():
-    """Get latest portfolio snapshot."""
+    """Get latest portfolio snapshot with initial capital and recalculated P/L."""
     snapshot = await portfolio_service.get_latest_portfolio()
     if not snapshot:
         return {
             "total_value": 0,
             "cash_balance": 0,
+            "initial_capital": 0,
             "total_pnl": 0,
             "total_pnl_pct": 0,
             "positions": [],
         }
 
+    # Fetch initial capital from risk_config
+    ic_row = await execute_query(
+        "SELECT value FROM risk_config WHERE key = 'initial_capital'",
+        fetch_one=True,
+    )
+    initial_capital = float(ic_row["value"]) if ic_row else snapshot["cash_balance"]
+
+    # Recalculate P/L based on initial capital (includes realized + unrealized)
+    total_value = snapshot["total_value"]
+    total_pnl = total_value - initial_capital
+    total_pnl_pct = round((total_pnl / initial_capital * 100), 2) if initial_capital > 0 else 0.0
+
     positions = await portfolio_service.get_latest_positions()
     return {
-        "total_value": snapshot["total_value"],
+        "total_value": total_value,
         "cash_balance": snapshot["cash_balance"],
-        "total_pnl": snapshot["total_pnl"],
-        "total_pnl_pct": snapshot["total_pnl_pct"],
+        "initial_capital": initial_capital,
+        "total_pnl": total_pnl,
+        "total_pnl_pct": total_pnl_pct,
         "positions": positions,
         "timestamp": snapshot["timestamp"],
     }
