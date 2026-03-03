@@ -27,10 +27,20 @@ export interface AppSettings {
   claude_max_tokens: number;
 }
 
+export interface RiskConfig {
+  stop_loss_pct: number;
+  take_profit_pct: number;
+  max_positions: number;
+  max_position_weight_pct: number;
+  max_daily_loss: number;
+  signal_approval_mode: 'auto' | 'manual';
+}
+
 // Dashboard types
 export interface PortfolioData {
   total_value: number;
   cash_balance: number;
+  initial_capital: number;
   total_pnl: number;
   total_pnl_pct: number;
   positions: Position[];

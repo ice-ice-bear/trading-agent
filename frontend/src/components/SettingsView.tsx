@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import type { AppSettings } from '../types';
-import { checkHealth } from '../services/api';
+import type { AppSettings, RiskConfig } from '../types';
+import { checkHealth, getRiskConfig, updateRiskConfig } from '../services/api';
 
 interface Props {
   settings: AppSettings;
@@ -16,6 +16,15 @@ const MODEL_OPTIONS = [
   { value: 'claude-opus-4-5-20251101', label: 'Claude Opus 4.5', desc: '고도의 추론' },
 ];
 
+const DEFAULT_RISK: RiskConfig = {
+  stop_loss_pct: -3.0,
+  take_profit_pct: 5.0,
+  max_positions: 5,
+  max_position_weight_pct: 20.0,
+  max_daily_loss: 500000,
+  signal_approval_mode: 'auto',
+};
+
 export default function SettingsView({ settings, onSave, error, onBack }: Props) {
   const [form, setForm] = useState(settings);
   const [saving, setSaving] = useState(false);
@@ -27,18 +36,41 @@ export default function SettingsView({ settings, onSave, error, onBack }: Props)
     mcp_tools: string[];
   } | null>(null);
 
+  // Risk config state
+  const [riskBase, setRiskBase] = useState<RiskConfig>(DEFAULT_RISK);
+  const [riskForm, setRiskForm] = useState<RiskConfig>(DEFAULT_RISK);
+  const [riskSaving, setRiskSaving] = useState(false);
+  const [riskSaved, setRiskSaved] = useState(false);
+  const [riskError, setRiskError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     setForm(settings);
   }, [settings]);
 
   useEffect(() => {
     checkHealth().then(setHealth).catch(() => setHealth(null));
+    getRiskConfig()
+      .then((cfg) => {
+        setRiskBase(cfg);
+        setRiskForm(cfg);
+      })
+      .catch(() => {/* use defaults */})
+      .finally(() => setLoading(false));
   }, []);
 
   const dirty =
     form.trading_mode !== settings.trading_mode ||
     form.claude_model !== settings.claude_model ||
     form.claude_max_tokens !== settings.claude_max_tokens;
+
+  const riskDirty =
+    riskForm.stop_loss_pct !== riskBase.stop_loss_pct ||
+    riskForm.take_profit_pct !== riskBase.take_profit_pct ||
+    riskForm.max_positions !== riskBase.max_positions ||
+    riskForm.max_position_weight_pct !== riskBase.max_position_weight_pct ||
+    riskForm.max_daily_loss !== riskBase.max_daily_loss ||
+    riskForm.signal_approval_mode !== riskBase.signal_approval_mode;
 
   const handleSave = async () => {
     setSaving(true);
@@ -57,6 +89,51 @@ export default function SettingsView({ settings, onSave, error, onBack }: Props)
       setSaving(false);
     }
   };
+
+  const handleRiskSave = async () => {
+    setRiskSaving(true);
+    setRiskSaved(false);
+    setRiskError(null);
+    try {
+      const updated = await updateRiskConfig(riskForm);
+      setRiskBase(updated);
+      setRiskForm(updated);
+      setRiskSaved(true);
+      setTimeout(() => setRiskSaved(false), 2000);
+    } catch (e) {
+      setRiskError(e instanceof Error ? e.message : '저장 실패');
+    } finally {
+      setRiskSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="settings-view">
+        <div className="settings-scroll">
+          <div className="settings-inner">
+            <div className="settings-page-header">
+              <button className="settings-back-btn" onClick={onBack}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 12H5" />
+                  <path d="M12 19l-7-7 7-7" />
+                </svg>
+                대화로 돌아가기
+              </button>
+              <h1 className="settings-title">설정</h1>
+              <p className="settings-subtitle">트레이딩 환경과 AI 모델을 구성합니다</p>
+            </div>
+            <div className="settings-loading">
+              <div className="settings-skeleton-card" />
+              <div className="settings-skeleton-card" />
+              <div className="settings-skeleton-card settings-skeleton-card--tall" />
+              <div className="settings-skeleton-card" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="settings-view">
@@ -172,6 +249,201 @@ export default function SettingsView({ settings, onSave, error, onBack }: Props)
                   <span className="token-value">{form.claude_max_tokens.toLocaleString()}</span>
                 </div>
               </div>
+            </div>
+          </section>
+
+          {/* Risk Management */}
+          <section className="settings-card">
+            <div className="settings-card-header">
+              <div className="settings-card-icon risk-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+              </div>
+              <div>
+                <h2>리스크 관리</h2>
+                <p>에이전트 매매 임계값을 설정합니다</p>
+              </div>
+            </div>
+            <div className="settings-card-body">
+              {/* Stop-loss */}
+              <div className="setting-field">
+                <label className="setting-label" htmlFor="stop-loss">
+                  손절매 임계값
+                  <span className="setting-hint">이 손실률에 도달하면 자동 매도</span>
+                </label>
+                <div className="risk-input-row">
+                  <input
+                    id="stop-loss"
+                    type="number"
+                    min={-20}
+                    max={-0.1}
+                    step={0.1}
+                    value={riskForm.stop_loss_pct}
+                    onChange={(e) =>
+                      setRiskForm({ ...riskForm, stop_loss_pct: Number(e.target.value) })
+                    }
+                    className="risk-number-input"
+                  />
+                  <span className="risk-unit">%</span>
+                </div>
+              </div>
+
+              {/* Take-profit */}
+              <div className="setting-field">
+                <label className="setting-label" htmlFor="take-profit">
+                  익절매 임계값
+                  <span className="setting-hint">이 수익률에 도달하면 자동 매도</span>
+                </label>
+                <div className="risk-input-row">
+                  <input
+                    id="take-profit"
+                    type="number"
+                    min={0.5}
+                    max={50}
+                    step={0.5}
+                    value={riskForm.take_profit_pct}
+                    onChange={(e) =>
+                      setRiskForm({ ...riskForm, take_profit_pct: Number(e.target.value) })
+                    }
+                    className="risk-number-input"
+                  />
+                  <span className="risk-unit">%</span>
+                </div>
+              </div>
+
+              {/* Max positions */}
+              <div className="setting-field">
+                <label className="setting-label" htmlFor="max-positions">
+                  최대 보유 종목 수
+                  <span className="setting-hint">동시에 보유할 수 있는 최대 종목</span>
+                </label>
+                <div className="token-input-row">
+                  <input
+                    id="max-positions"
+                    type="range"
+                    min={1}
+                    max={20}
+                    step={1}
+                    value={riskForm.max_positions}
+                    onChange={(e) =>
+                      setRiskForm({ ...riskForm, max_positions: Number(e.target.value) })
+                    }
+                    className="token-slider"
+                  />
+                  <span className="token-value">{riskForm.max_positions}종목</span>
+                </div>
+              </div>
+
+              {/* Max position weight */}
+              <div className="setting-field">
+                <label className="setting-label" htmlFor="max-weight">
+                  종목당 최대 비중
+                  <span className="setting-hint">단일 종목이 포트폴리오에서 차지할 수 있는 최대 비율</span>
+                </label>
+                <div className="token-input-row">
+                  <input
+                    id="max-weight"
+                    type="range"
+                    min={5}
+                    max={50}
+                    step={5}
+                    value={riskForm.max_position_weight_pct}
+                    onChange={(e) =>
+                      setRiskForm({ ...riskForm, max_position_weight_pct: Number(e.target.value) })
+                    }
+                    className="token-slider"
+                  />
+                  <span className="token-value">{riskForm.max_position_weight_pct}%</span>
+                </div>
+              </div>
+
+              {/* Daily loss limit */}
+              <div className="setting-field">
+                <label className="setting-label" htmlFor="daily-loss">
+                  일일 최대 손실액
+                  <span className="setting-hint">하루 손실이 이 금액을 초과하면 매수 신호 차단</span>
+                </label>
+                <div className="risk-input-row">
+                  <input
+                    id="daily-loss"
+                    type="number"
+                    min={10000}
+                    max={5000000}
+                    step={10000}
+                    value={riskForm.max_daily_loss}
+                    onChange={(e) =>
+                      setRiskForm({ ...riskForm, max_daily_loss: Number(e.target.value) })
+                    }
+                    className="risk-number-input risk-number-input--wide"
+                  />
+                  <span className="risk-unit">원</span>
+                </div>
+              </div>
+
+              {/* Signal approval mode */}
+              <div className="setting-field">
+                <label className="setting-label">
+                  신호 승인 방식
+                  <span className="setting-hint">매매 신호를 자동 실행할지, 수동으로 승인할지 설정</span>
+                </label>
+                <div className="mode-toggle">
+                  <button
+                    className={`mode-btn demo ${riskForm.signal_approval_mode === 'auto' ? 'active' : ''}`}
+                    onClick={() => setRiskForm({ ...riskForm, signal_approval_mode: 'auto' })}
+                  >
+                    <span className="mode-dot demo" />
+                    <div className="mode-label">
+                      <strong>자동 실행</strong>
+                      <span>Auto</span>
+                    </div>
+                  </button>
+                  <button
+                    className={`mode-btn real ${riskForm.signal_approval_mode === 'manual' ? 'active' : ''}`}
+                    onClick={() => setRiskForm({ ...riskForm, signal_approval_mode: 'manual' })}
+                  >
+                    <span className="mode-dot real" />
+                    <div className="mode-label">
+                      <strong>수동 승인</strong>
+                      <span>Manual</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Risk error */}
+            {riskError && (
+              <div className="settings-error" style={{ margin: '0 16px 8px' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="15" y1="9" x2="9" y2="15" />
+                  <line x1="9" y1="9" x2="15" y2="15" />
+                </svg>
+                {riskError}
+              </div>
+            )}
+
+            {/* Risk save button */}
+            <div className="settings-actions" style={{ paddingTop: 0, borderTop: 'none' }}>
+              <button
+                className={`settings-save-btn ${riskSaved ? 'saved' : ''}`}
+                onClick={handleRiskSave}
+                disabled={riskSaving || !riskDirty}
+              >
+                {riskSaving ? (
+                  <span className="save-spinner" />
+                ) : riskSaved ? (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    저장됨
+                  </>
+                ) : (
+                  '리스크 설정 저장'
+                )}
+              </button>
             </div>
           </section>
 

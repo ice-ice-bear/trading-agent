@@ -110,6 +110,29 @@ export async function getOrders(limit = 50): Promise<{ orders: import('../types'
   return res.json();
 }
 
+// --- Risk Config API ---
+
+export async function getRiskConfig(): Promise<import('../types').RiskConfig> {
+  const res = await fetch('/api/agents/risk-config');
+  if (!res.ok) throw new Error('Failed to fetch risk config');
+  return res.json();
+}
+
+export async function updateRiskConfig(
+  patch: Partial<import('../types').RiskConfig>
+): Promise<import('../types').RiskConfig> {
+  const res = await fetch('/api/agents/risk-config', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Failed to update risk config');
+  }
+  return res.json();
+}
+
 // --- Agent API ---
 
 export async function getAgents(): Promise<{ agents: import('../types').Agent[] }> {

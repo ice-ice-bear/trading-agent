@@ -12,6 +12,7 @@ export default function PortfolioSummary({ data, loading }: Props) {
 
   const totalValue = data?.total_value ?? 0;
   const cash = data?.cash_balance ?? 0;
+  const initialCapital = data?.initial_capital ?? 0;
   const pnl = data?.total_pnl ?? 0;
   const pnlPct = data?.total_pnl_pct ?? 0;
   const posCount = data?.positions?.length ?? 0;
@@ -23,6 +24,10 @@ export default function PortfolioSummary({ data, loading }: Props) {
         <div className="summary-item">
           <span className="summary-label">Total</span>
           <span className="summary-value">{formatKRW(totalValue)}</span>
+        </div>
+        <div className="summary-item">
+          <span className="summary-label">Initial</span>
+          <span className="summary-value summary-value--muted">{formatKRW(initialCapital)}</span>
         </div>
         <div className="summary-item">
           <span className="summary-label">Cash</span>
