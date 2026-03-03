@@ -68,6 +68,16 @@ class PortfolioMonitorAgent(BaseAgent):
                 else:
                     data = inner
 
+            # Detect MCP-level errors (e.g. timeout, subprocess failure)
+            if isinstance(data, dict) and data.get("success") is False:
+                error_msg = data.get("error", "unknown MCP error")
+                logger.warning("MCP returned error for inquire_balance: %s", error_msg)
+                return AgentResult(
+                    success=False,
+                    summary=f"KIS API 호출 실패: {error_msg}",
+                    error=error_msg,
+                )
+
             # Parse KIS balance response structure
             if isinstance(data, list):
                 for item in data:
@@ -87,20 +97,37 @@ class PortfolioMonitorAgent(BaseAgent):
                     if isinstance(summary, list) and summary:
                         summary = summary[0]
                     if isinstance(summary, dict):
-                        total_value = float(summary.get("tot_evlu_amt", 0))
-                        cash_balance = float(summary.get("dnca_tot_amt", 0) or summary.get("prvs_rcdl_excc_amt", 0))
-                        total_pnl = float(summary.get("evlu_pfls_smtl_amt", 0))
+                        def _f(key: str) -> float:
+                            """Convert KIS string field to float (returns 0.0 for '0' or missing)."""
+                            return float(summary.get(key) or 0)
+
+                        total_value = _f("tot_evlu_amt")
+                        # nxdy_excc_amt(익일정산금액) reflects today's unsettled buy/sell;
+                        # dnca_tot_amt is settled-only and lags by T+2.
+                        cash_balance = (
+                            _f("nxdy_excc_amt")
+                            or _f("dnca_tot_amt")
+                            or _f("prvs_rcdl_excc_amt")
+                        )
+                        total_pnl = _f("evlu_pfls_smtl_amt")
+                        logger.info(
+                            "KIS output2 — tot_evlu_amt=%s nxdy_excc_amt=%s dnca_tot_amt=%s",
+                            summary.get("tot_evlu_amt"),
+                            summary.get("nxdy_excc_amt"),
+                            summary.get("dnca_tot_amt"),
+                        )
         except (json.JSONDecodeError, TypeError, ValueError) as e:
             logger.warning(f"Balance parse partial failure: {e}, raw: {str(balance_raw)[:500]}")
 
-        # Compute totals from positions if not available from summary
+        # Recompute total_value from positions + cash when positions exist.
+        # When positions = 0, preserve tot_evlu_amt from KIS (do NOT overwrite
+        # with dnca_tot_amt which is T+2-lagged settled-only cash).
         if positions:
             total_market = sum(p.get("market_value", 0) for p in positions)
-            # Always recompute total_value from positions + cash for accuracy
             if total_market > 0:
                 total_value = total_market + cash_balance
-        elif cash_balance > 0:
-            # No positions: total value equals cash balance
+        elif total_value == 0 and cash_balance > 0:
+            # Fallback only when KIS returned no tot_evlu_amt at all
             total_value = cash_balance
         if total_pnl == 0 and positions:
             total_pnl = sum(p.get("unrealized_pnl", 0) for p in positions)
