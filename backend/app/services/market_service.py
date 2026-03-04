@@ -154,15 +154,21 @@ async def get_kospi200_components() -> list[str]:
     if cached:
         return [row["stock_code"] for row in cached]
 
-    # KIS API로 KOSPI200 구성 종목 조회
+    # market_cap API로 KOSPI200 구성종목 조회 (fid_input_iscd=2001)
     raw = await mcp_manager.call_tool(
         "domestic_stock",
         {
-            "api_type": "inquire_index_components",
+            "api_type": "market_cap",
             "params": {
-                "env_dv": "demo",
-                "fid_cond_mrkt_div_code": "U",
-                "fid_input_iscd": "0002",  # KOSPI200 index code
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": "2001",       # 코스피200
+                "fid_cond_scr_div_code": "20174",
+                "fid_div_cls_code": "0",
+                "fid_trgt_cls_code": "0",
+                "fid_trgt_exls_cls_code": "0",
+                "fid_input_price_1": "",
+                "fid_input_price_2": "",
+                "fid_vol_cnt": "",
             },
         },
     )
@@ -176,7 +182,8 @@ async def get_kospi200_components() -> list[str]:
     # DB에 upsert
     codes = []
     for item in components:
-        code = item.get("stck_shrn_iscd") or item.get("stock_code", "")
+        code = (item.get("mksc_shrn_iscd") or item.get("stck_shrn_iscd")
+                or item.get("stock_code", ""))
         name = item.get("hts_kor_isnm") or item.get("stock_name", "")
         if code:
             await execute_insert(
