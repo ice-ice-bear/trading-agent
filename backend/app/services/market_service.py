@@ -146,7 +146,7 @@ def _unwrap_mcp_response(raw: Any) -> Any:
 
 
 async def get_kospi200_components() -> list[str]:
-    """KOSPI200 구성 종목 코드 반환. DB 캐시 우선, 없으면 KIS API 조회."""
+    """KOSPI200 구성 종목 코드 반환. DB 캐시 우선, 없으면 NAVER Finance 스크래핑."""
     # 캐시 확인 (오늘 업데이트된 데이터)
     cached = await execute_query(
         "SELECT stock_code FROM kospi200_components WHERE date(updated_at) >= date('now')"
@@ -154,44 +154,57 @@ async def get_kospi200_components() -> list[str]:
     if cached:
         return [row["stock_code"] for row in cached]
 
-    # market_cap API로 KOSPI200 구성종목 조회 (fid_input_iscd=2001)
-    raw = await mcp_manager.call_tool(
-        "domestic_stock",
-        {
-            "api_type": "market_cap",
-            "params": {
-                "fid_cond_mrkt_div_code": "J",
-                "fid_input_iscd": "2001",       # 코스피200
-                "fid_cond_scr_div_code": "20174",
-                "fid_div_cls_code": "0",
-                "fid_trgt_cls_code": "0",
-                "fid_trgt_exls_cls_code": "0",
-                "fid_input_price_1": "",
-                "fid_input_price_2": "",
-                "fid_vol_cnt": "",
-            },
-        },
-    )
+    # NAVER Finance에서 KOSPI200 구성종목 스크래핑 (동기 → executor)
+    try:
+        loop = asyncio.get_event_loop()
+        codes_names = await loop.run_in_executor(None, _fetch_kospi200_via_naver)
+    except Exception as e:
+        logger.warning(f"NAVER KOSPI200 조회 실패: {e}")
+        codes_names = {}
 
-    components = _parse_list_response(raw, 300)
-    if not components:
-        # API 실패 시 캐시된 데이터 fallback (날짜 무관)
+    if not codes_names:
+        # 실패 시 캐시된 데이터 fallback (날짜 무관)
         fallback = await execute_query("SELECT stock_code FROM kospi200_components")
         return [row["stock_code"] for row in fallback] if fallback else []
 
     # DB에 upsert
-    codes = []
-    for item in components:
-        code = (item.get("mksc_shrn_iscd") or item.get("stck_shrn_iscd")
-                or item.get("stock_code", ""))
-        name = item.get("hts_kor_isnm") or item.get("stock_name", "")
-        if code:
-            await execute_insert(
-                """INSERT OR REPLACE INTO kospi200_components (stock_code, stock_name, updated_at)
-                   VALUES (?, ?, datetime('now'))""",
-                (code, name),
-            )
-            codes.append(code)
+    for code, name in codes_names.items():
+        await execute_insert(
+            """INSERT OR REPLACE INTO kospi200_components (stock_code, stock_name, updated_at)
+               VALUES (?, ?, datetime('now'))""",
+            (code, name),
+        )
+
+    logger.info(f"KOSPI200 구성종목 {len(codes_names)}개 NAVER Finance에서 갱신")
+    return list(codes_names.keys())
+
+
+def _fetch_kospi200_via_naver() -> dict[str, str]:
+    """NAVER Finance에서 KOSPI200 구성종목 코드·종목명 반환 (동기 함수).
+
+    NAVER Finance는 별도 인증 없이 접근 가능하며 항상 최신 구성 정보를 제공한다.
+    Returns:
+        {종목코드: 종목명} dict
+    """
+    import re
+    import requests
+
+    session = requests.Session()
+    session.headers["User-Agent"] = "Mozilla/5.0"
+    session.get("https://finance.naver.com/")
+
+    codes: dict[str, str] = {}
+    for page in range(1, 25):
+        resp = session.get(
+            "https://finance.naver.com/sise/entryJongmok.naver",
+            params={"indCode": "KPI200", "page": str(page)},
+            timeout=10,
+        )
+        pairs = re.findall(r"item/main\.naver\?code=(\d{6})[^>]*>([^<]+)", resp.text)
+        if not pairs:
+            break
+        for code, name in pairs:
+            codes[code] = name.strip()
 
     return codes
 
