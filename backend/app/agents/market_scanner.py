@@ -1,18 +1,25 @@
-"""Market Scanner Agent — scans market data and generates trading signals using Claude analysis."""
-
-import json
+"""Market Scanner Agent — KOSPI200 screening + expert team analysis."""
+import asyncio
 import logging
-
-import anthropic
+from typing import Any
 
 from app.agents.base import AgentContext, AgentResult, AgentRole, BaseAgent
+from app.agents.market_scanner_experts import run_chief_debate, run_expert_panel
+from app.agents.market_scanner_indicators import compute_all_indicators
 from app.agents.state import shared_state
-from app.config import settings
 from app.models.db import execute_insert
-from app.services.market_service import get_fluctuation_rank, get_stock_price, get_volume_rank
-from app.services.runtime_settings import runtime_settings
+from app.services.market_service import (
+    get_batch_charts,
+    get_fluctuation_rank,
+    get_kospi200_components,
+    get_volume_rank,
+    parse_ohlcv_from_chart,
+)
 
 logger = logging.getLogger(__name__)
+
+# 후보군 최대 종목 수 (Stage 2 차트 수집 대상)
+MAX_CANDIDATES = 25
 
 
 class MarketScannerAgent(BaseAgent):
@@ -22,181 +29,173 @@ class MarketScannerAgent(BaseAgent):
     allowed_tools = ["domestic_stock"]
 
     async def execute(self, context: AgentContext) -> AgentResult:
-        """Scan market data and generate trading signals via Claude analysis."""
+        """KOSPI200 스크리닝 → 기술적 지표 계산 → 전문가 팀 분석 → 신호 생성."""
 
-        # 1. Gather market data
-        market_data = {}
-        errors = []
-
-        try:
-            volume_data = await get_volume_rank(count=10)
-            market_data["volume_rank"] = volume_data
-        except Exception as e:
-            errors.append(f"거래량 순위 조회 실패: {e}")
-
-        try:
-            fluctuation_data = await get_fluctuation_rank(count=10)
-            market_data["fluctuation_rank"] = fluctuation_data
-        except Exception as e:
-            errors.append(f"등락률 순위 조회 실패: {e}")
-
-        # Check watchlist prices
-        watchlist = await shared_state.get_watchlist()
-        if watchlist:
-            watchlist_prices = {}
-            for stock_code in watchlist[:10]:
-                try:
-                    price_data = await get_stock_price(stock_code)
-                    watchlist_prices[stock_code] = price_data
-                except Exception:
-                    pass
-            if watchlist_prices:
-                market_data["watchlist_prices"] = watchlist_prices
-
-        if not market_data:
+        # Stage 1: KOSPI200 스크리닝
+        candidates = await self._stage1_screening()
+        if not candidates:
             return AgentResult(
                 success=False,
-                summary=f"시장 데이터 수집 실패: {'; '.join(errors)}",
-                error="; ".join(errors),
+                summary="후보 종목 추출 실패 (KOSPI200 데이터 없음)",
+                error="no_candidates",
             )
 
-        # Get current portfolio for context
+        # Stage 2: 차트 수집 + 지표 계산
+        enriched = await self._stage2_enrich(candidates)
+        if not enriched:
+            return AgentResult(
+                success=False,
+                summary="기술적 지표 계산 실패 (차트 데이터 없음)",
+                error="no_chart_data",
+            )
+
+        # Stage 3 + 4: 전문가 팀 분석 및 신호 생성
         portfolio = await shared_state.get_portfolio()
-        portfolio_summary = {
-            "total_value": portfolio.total_value,
-            "cash_balance": portfolio.cash_balance,
+        portfolio_context = {
+            "cash_pct": (
+                portfolio.cash_balance / portfolio.total_value * 100
+                if portfolio.total_value > 0 else 100
+            ),
+            "position_count": len(portfolio.positions),
             "total_pnl": portfolio.total_pnl,
-            "positions": [
-                {"stock_code": p.get("stock_code"), "stock_name": p.get("stock_name")}
-                for p in portfolio.positions
-            ],
+            "held_codes": [p.get("stock_code") for p in portfolio.positions],
         }
 
-        # 2. Ask Claude to analyze and generate signals
-        signals = await self._analyze_with_claude(market_data, portfolio_summary)
-
-        if not signals:
-            return AgentResult(
-                success=True,
-                summary="시장 스캔 완료. 매매 신호 없음.",
-                data={"scanned_stocks": len(market_data.get("volume_rank", []))},
-            )
-
-        # 3. Save signals to DB and emit events
         saved_signals = []
-        for sig in signals:
-            signal_id = await execute_insert(
-                """INSERT INTO signals
-                   (agent_id, stock_code, stock_name, direction, confidence, reason, status)
-                   VALUES (?, ?, ?, ?, ?, ?, 'pending')""",
-                (
-                    self.agent_id,
-                    sig["stock_code"],
-                    sig.get("stock_name", ""),
-                    sig["direction"],
-                    sig.get("confidence", 0.5),
-                    sig.get("reason", ""),
-                ),
-            )
-            saved_signal = {**sig, "signal_id": signal_id}
-            saved_signals.append(saved_signal)
-
-            # Emit signal.generated for RiskManager to evaluate
-            await self.emit_event("signal.generated", saved_signal)
+        for stock_data in enriched[:10]:  # 상위 10개만 전문가 분석
+            signal = await self._analyze_stock(stock_data, portfolio_context)
+            if signal:
+                saved_signals.append(signal)
 
         return AgentResult(
             success=True,
-            summary=f"시장 스캔 완료. {len(saved_signals)}개 신호 생성.",
-            data={"signals": saved_signals},
+            summary=f"KOSPI200 {len(candidates)}개 스캔 → {len(enriched)}개 지표 계산 → {len(saved_signals)}개 신호 생성",
+            data={"signals": saved_signals, "scanned": len(candidates)},
         )
 
-    async def _analyze_with_claude(
-        self, market_data: dict, portfolio_summary: dict
-    ) -> list[dict]:
-        """Use Claude to analyze market data and extract trading signals."""
-        model = runtime_settings.get("claude_model") or settings.claude_model
-        max_tokens = int(runtime_settings.get("claude_max_tokens") or settings.claude_max_tokens)
-
-        prompt = f"""당신은 국내 주식 시장 분석가입니다.
-아래 시장 데이터를 분석하고 매매 신호를 생성하세요.
-
-## 현재 포트폴리오
-{json.dumps(portfolio_summary, ensure_ascii=False, indent=2)}
-
-## 시장 데이터
-{json.dumps(market_data, ensure_ascii=False, indent=2)}
-
-## 분석 기준
-- 거래량 급증 + 상승 종목 중 추가 상승 여력이 있는 종목
-- 과매도 종목 중 반등 가능성이 높은 종목
-- 이미 보유 중인 종목은 추가 매수보다 매도 신호에 집중
-- 신뢰도(confidence)는 0.0~1.0 사이, 0.7 이상만 신호로 생성
-
-## 응답 형식 (반드시 JSON 배열만 출력)
-```json
-[
-  {{
-    "stock_code": "005930",
-    "stock_name": "삼성전자",
-    "direction": "buy",
-    "confidence": 0.8,
-    "reason": "거래량 200% 급증, MACD 골든크로스 임박"
-  }}
-]
-```
-
-신호가 없으면 빈 배열 `[]`을 반환하세요.
-"""
-
+    async def _stage1_screening(self) -> list[dict[str, Any]]:
+        """거래량/등락률 TOP50을 KOSPI200과 교차 필터링."""
         try:
-            client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-            response = await client.messages.create(
-                model=model,
-                max_tokens=min(max_tokens, 2048),
-                messages=[{"role": "user", "content": prompt}],
+            kospi200_codes, volume_data, fluctuation_data = await asyncio.gather(
+                get_kospi200_components(),
+                get_volume_rank(count=50),
+                get_fluctuation_rank(count=50),
             )
-
-            # Extract text from response
-            text = ""
-            for block in response.content:
-                if hasattr(block, "text"):
-                    text += block.text
-
-            # Parse JSON from response
-            return self._parse_signals(text)
-
         except Exception as e:
-            logger.error(f"Claude analysis failed: {e}")
+            logger.error(f"Stage 1 data fetch failed: {e}")
             return []
 
-    def _parse_signals(self, text: str) -> list[dict]:
-        """Parse trading signals from Claude's response text."""
-        # Try to find JSON array in the response
-        import re
+        kospi200_set = set(kospi200_codes)
 
-        # Try code block first
-        match = re.search(r"```(?:json)?\s*(\[.*?\])\s*```", text, re.DOTALL)
-        if match:
-            try:
-                return json.loads(match.group(1))
-            except json.JSONDecodeError:
-                pass
+        # 종목별 스코어 집계 (거래량/등락률 순위 역수 합산)
+        scores: dict[str, dict] = {}
 
-        # Try raw JSON
-        match = re.search(r"\[.*?\]", text, re.DOTALL)
-        if match:
-            try:
-                signals = json.loads(match.group(0))
-                if isinstance(signals, list):
-                    # Validate signal structure
-                    valid = []
-                    for s in signals:
-                        if isinstance(s, dict) and s.get("stock_code") and s.get("direction"):
-                            if s.get("confidence", 0) >= 0.7:
-                                valid.append(s)
-                    return valid
-            except json.JSONDecodeError:
-                pass
+        for rank, item in enumerate(volume_data):
+            code = item.get("stck_shrn_iscd") or item.get("stock_code", "")
+            if not code:
+                continue
+            if kospi200_set and code not in kospi200_set:
+                continue  # KOSPI200 외 종목 제외 (리스트 있을 때만)
+            if code not in scores:
+                scores[code] = {
+                    "stock_code": code,
+                    "stock_name": item.get("hts_kor_isnm") or item.get("stock_name", ""),
+                    "score": 0,
+                }
+            scores[code]["score"] += (50 - rank)
 
-        logger.warning(f"Could not parse signals from Claude response: {text[:200]}")
-        return []
+        for rank, item in enumerate(fluctuation_data):
+            code = item.get("stck_shrn_iscd") or item.get("stock_code", "")
+            if not code:
+                continue
+            if kospi200_set and code not in kospi200_set:
+                continue
+            if code not in scores:
+                scores[code] = {
+                    "stock_code": code,
+                    "stock_name": item.get("hts_kor_isnm") or item.get("stock_name", ""),
+                    "score": 0,
+                }
+            scores[code]["score"] += (50 - rank)
+
+        return sorted(scores.values(), key=lambda x: x["score"], reverse=True)[:MAX_CANDIDATES]
+
+    async def _stage2_enrich(self, candidates: list[dict]) -> list[dict]:
+        """후보 종목 차트 데이터 수집 + 기술적 지표 계산."""
+        codes = [c["stock_code"] for c in candidates]
+        charts = await get_batch_charts(codes)
+
+        enriched = []
+        for candidate in candidates:
+            code = candidate["stock_code"]
+            chart_data = charts.get(code, [])
+            if not chart_data:
+                continue
+
+            ohlcv = parse_ohlcv_from_chart(chart_data)
+            if len(ohlcv.get("closes", [])) < 20:
+                continue
+
+            current_price = ohlcv["closes"][-1] if ohlcv["closes"] else 0
+            indicators = compute_all_indicators(ohlcv, current_price)
+            if not indicators:
+                continue
+
+            enriched.append({
+                **candidate,
+                "indicators": indicators,
+                "ohlcv": ohlcv,
+            })
+
+        return enriched
+
+    async def _analyze_stock(
+        self, stock_data: dict, portfolio_context: dict
+    ) -> dict | None:
+        """단일 종목에 대해 전문가 팀 분석 + Chief 토론 → 신호 DB 저장."""
+        stock_info = {
+            "code": stock_data["stock_code"],
+            "name": stock_data.get("stock_name", ""),
+        }
+        indicators = stock_data.get("indicators", {})
+
+        data_package = {
+            "stock": stock_info,
+            "technicals": indicators,
+            "portfolio_context": portfolio_context,
+        }
+
+        # Stage 3: 전문가 병렬 분석
+        expert_analyses = await run_expert_panel(data_package)
+        if not expert_analyses:
+            return None
+
+        # Stage 4: Chief 토론
+        final = await run_chief_debate(stock_info, expert_analyses, portfolio_context)
+        if not final:
+            return None
+
+        confidence = float(final.get("confidence", 0))
+        decision = final.get("decision", "hold")
+
+        if decision == "hold" or confidence < 0.7:
+            return None  # hold 또는 낮은 신뢰도는 신호 없음
+
+        # DB 저장
+        signal_id = await execute_insert(
+            """INSERT INTO signals
+               (agent_id, stock_code, stock_name, direction, confidence, reason, status)
+               VALUES (?, ?, ?, ?, ?, ?, 'pending')""",
+            (
+                self.agent_id,
+                stock_info["code"],
+                stock_info["name"],
+                decision,
+                confidence,
+                final.get("reason", ""),
+            ),
+        )
+
+        saved = {**final, "signal_id": signal_id}
+        await self.emit_event("signal.generated", saved)
+        return saved
