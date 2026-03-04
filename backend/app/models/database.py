@@ -117,6 +117,13 @@ CREATE INDEX IF NOT EXISTS idx_signals_status ON signals(status);
 CREATE INDEX IF NOT EXISTS idx_agent_logs_agent ON agent_logs(agent_id);
 CREATE INDEX IF NOT EXISTS idx_agent_logs_timestamp ON agent_logs(timestamp);
 CREATE INDEX IF NOT EXISTS idx_snapshots_timestamp ON portfolio_snapshots(timestamp);
+
+CREATE TABLE IF NOT EXISTS kospi200_components (
+    stock_code TEXT PRIMARY KEY,
+    stock_name TEXT NOT NULL,
+    sector TEXT,
+    updated_at TEXT DEFAULT (datetime('now'))
+);
 """
 
 # Default risk configuration values
