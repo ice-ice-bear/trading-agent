@@ -36,7 +36,7 @@ class MarketScannerAgent(BaseAgent):
         if not candidates:
             return AgentResult(
                 success=False,
-                summary="후보 종목 추출 실패 (KOSPI200 데이터 없음)",
+                summary="후보 종목 추출 실패 (거래량/등락률 순위 데이터 없음)",
                 error="no_candidates",
             )
 
@@ -74,24 +74,38 @@ class MarketScannerAgent(BaseAgent):
         )
 
     async def _stage1_screening(self) -> list[dict[str, Any]]:
-        """거래량/등락률 TOP50을 KOSPI200과 교차 필터링."""
+        """거래량/등락률 TOP50을 KOSPI200과 교차 필터링.
+
+        Note: fastmcp SSE 클라이언트가 단일 세션에서 동시 호출을 지원하지 않아
+        asyncio.gather 대신 순차 호출을 사용한다.
+        """
         try:
-            kospi200_codes, volume_data, fluctuation_data = await asyncio.gather(
-                get_kospi200_components(),
-                get_volume_rank(count=50),
-                get_fluctuation_rank(count=50),
-            )
+            kospi200_codes = await get_kospi200_components()
+            volume_data = await get_volume_rank(count=50)
+            fluctuation_data = await get_fluctuation_rank(count=50)
         except Exception as e:
             logger.error(f"Stage 1 data fetch failed: {e}")
             return []
 
         kospi200_set = set(kospi200_codes)
+        logger.info(
+            f"Stage 1: KOSPI200={len(kospi200_set)}개, "
+            f"volume_rank={len(volume_data)}개, fluctuation={len(fluctuation_data)}개"
+        )
+
+        def _extract_code(item: dict) -> str:
+            # volume_rank → mksc_shrn_iscd, fluctuation → stck_shrn_iscd
+            return (
+                item.get("mksc_shrn_iscd")
+                or item.get("stck_shrn_iscd")
+                or item.get("stock_code", "")
+            )
 
         # 종목별 스코어 집계 (거래량/등락률 순위 역수 합산)
         scores: dict[str, dict] = {}
 
         for rank, item in enumerate(volume_data):
-            code = item.get("stck_shrn_iscd") or item.get("stock_code", "")
+            code = _extract_code(item)
             if not code:
                 continue
             if kospi200_set and code not in kospi200_set:
@@ -105,7 +119,7 @@ class MarketScannerAgent(BaseAgent):
             scores[code]["score"] += (50 - rank)
 
         for rank, item in enumerate(fluctuation_data):
-            code = item.get("stck_shrn_iscd") or item.get("stock_code", "")
+            code = _extract_code(item)
             if not code:
                 continue
             if kospi200_set and code not in kospi200_set:
@@ -118,6 +132,7 @@ class MarketScannerAgent(BaseAgent):
                 }
             scores[code]["score"] += (50 - rank)
 
+        logger.info(f"Stage 1: 후보군 {len(scores)}개 종목 추출")
         return sorted(scores.values(), key=lambda x: x["score"], reverse=True)[:MAX_CANDIDATES]
 
     async def _stage2_enrich(self, candidates: list[dict]) -> list[dict]:

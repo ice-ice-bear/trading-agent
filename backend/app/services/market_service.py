@@ -18,7 +18,6 @@ async def get_volume_rank(count: int = 20) -> list[dict]:
         {
             "api_type": "volume_rank",
             "params": {
-                "env_dv": "demo",
                 "fid_cond_mrkt_div_code": "J",
                 "fid_input_iscd": "0000",
                 "fid_cond_scr_div_code": "20171",
@@ -43,7 +42,6 @@ async def get_fluctuation_rank(count: int = 20) -> list[dict]:
         {
             "api_type": "fluctuation",
             "params": {
-                "env_dv": "demo",
                 "fid_cond_mrkt_div_code": "J",
                 "fid_input_iscd": "0000",
                 "fid_cond_scr_div_code": "20170",
@@ -55,6 +53,9 @@ async def get_fluctuation_rank(count: int = 20) -> list[dict]:
                 "fid_vol_cnt": "",
                 "fid_trgt_cls_code": "0",
                 "fid_trgt_exls_cls_code": "0",
+                "fid_div_cls_code": "0",
+                "fid_rsfl_rate1": "",
+                "fid_rsfl_rate2": "",
             },
         },
     )
@@ -86,6 +87,9 @@ async def get_stock_price(stock_code: str) -> dict[str, Any]:
 
 async def get_daily_chart(stock_code: str, period: str = "D") -> list[dict]:
     """Fetch daily price chart data."""
+    from datetime import date, timedelta
+    today = date.today().strftime("%Y%m%d")
+    start = (date.today() - timedelta(days=90)).strftime("%Y%m%d")
     raw = await mcp_manager.call_tool(
         "domestic_stock",
         {
@@ -94,12 +98,23 @@ async def get_daily_chart(stock_code: str, period: str = "D") -> list[dict]:
                 "env_dv": "demo",
                 "fid_cond_mrkt_div_code": "J",
                 "fid_input_iscd": stock_code,
+                "fid_input_date_1": start,
+                "fid_input_date_2": today,
                 "fid_period_div_code": period,
                 "fid_org_adj_prc": "0",
             },
         },
     )
-    return _parse_list_response(raw, 30)
+    # chart price returns output2 (daily OHLCV list), not output/output1
+    try:
+        data = _unwrap_mcp_response(raw)
+        if isinstance(data, dict):
+            for key in ("output2", "output", "output1"):
+                if key in data and isinstance(data[key], list):
+                    return data[key][:30]
+        return []
+    except Exception:
+        return []
 
 
 def _unwrap_mcp_response(raw: Any) -> Any:
@@ -115,7 +130,12 @@ def _unwrap_mcp_response(raw: Any) -> Any:
             if isinstance(inner, dict) and "data" in inner:
                 inner_data = inner["data"]
                 if isinstance(inner_data, str):
-                    return json.loads(inner_data)
+                    # Strip "The End\n" prefix produced by some KIS API wrappers
+                    cleaned = inner_data.strip()
+                    if cleaned.startswith("The End"):
+                        newline_pos = cleaned.find("\n")
+                        cleaned = cleaned[newline_pos + 1:] if newline_pos != -1 else cleaned
+                    return json.loads(cleaned)
                 return inner_data
             if isinstance(inner, str):
                 return json.loads(inner)
@@ -172,18 +192,20 @@ async def get_kospi200_components() -> list[str]:
 async def get_batch_charts(
     stock_codes: list[str], period: str = "D"
 ) -> dict[str, list[dict]]:
-    """여러 종목의 일봉 차트를 asyncio.gather로 병렬 수집."""
+    """여러 종목의 일봉 차트를 순차 수집.
 
-    async def safe_chart(code: str) -> tuple[str, list[dict]]:
+    Note: fastmcp SSE 클라이언트가 단일 세션에서 동시 호출을 지원하지 않아
+    asyncio.gather 대신 순차 호출을 사용한다.
+    """
+    results = {}
+    for code in stock_codes:
         try:
             data = await get_daily_chart(code, period)
-            return code, data
+            results[code] = data
         except Exception as e:
             logger.warning(f"Chart fetch failed for {code}: {e}")
-            return code, []
-
-    results = await asyncio.gather(*[safe_chart(code) for code in stock_codes])
-    return dict(results)
+            results[code] = []
+    return results
 
 
 def parse_ohlcv_from_chart(chart_data: list[dict]) -> dict[str, list[float]]:
