@@ -23,11 +23,11 @@ export default function AgentPanel({ agents, runningAgent, onRunAgent, onToggleA
           </div>
           <div className="agent-actions">
             <button
-              className="agent-toggle-btn"
+              className={`agent-toggle-btn ${agent.status === 'disabled' ? 'toggle-off' : 'toggle-on'}`}
               onClick={() => onToggleAgent(agent.id, agent.status === 'disabled')}
-              title={agent.status === 'disabled' ? '활성화' : '비활성화'}
+              title={agent.status === 'disabled' ? '클릭하여 활성화' : '클릭하여 비활성화'}
             >
-              {agent.status === 'disabled' ? 'ON' : 'OFF'}
+              {agent.status === 'disabled' ? 'OFF' : 'ON'}
             </button>
             <button
               className="agent-run-btn"

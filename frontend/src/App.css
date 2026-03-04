@@ -2248,6 +2248,16 @@
   border-color: var(--color-text-muted);
 }
 
+.agent-toggle-btn.toggle-on {
+  color: var(--color-success, #22c55e);
+  border-color: var(--color-success, #22c55e);
+}
+
+.agent-toggle-btn.toggle-off {
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+}
+
 /* Side Badge */
 .side-badge {
   display: inline-block;
