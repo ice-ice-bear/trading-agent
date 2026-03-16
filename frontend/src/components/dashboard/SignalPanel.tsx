@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import type { Signal } from '../../types';
 import { getSignals, approveSignal, rejectSignal } from '../../services/api';
+import { SignalCard } from '../signals/SignalCard';
 
 export default function SignalPanel() {
   const [signals, setSignals] = useState<Signal[]>([]);
@@ -56,40 +57,13 @@ export default function SignalPanel() {
       <h3 className="card-title">Signals</h3>
       <div className="signal-list">
         {signals.map((sig) => (
-          <div key={sig.id} className="signal-row">
-            <div className="signal-info">
-              <span className={`side-badge ${sig.direction}`}>
-                {sig.direction === 'buy' ? '매수' : '매도'}
-              </span>
-              <span className="stock-code">{sig.stock_code}</span>
-              {sig.stock_name && <span className="stock-name-sub">{sig.stock_name}</span>}
-              <span className="signal-confidence">{(sig.confidence * 100).toFixed(0)}%</span>
-            </div>
-            <div className="signal-actions">
-              {sig.status === 'pending' ? (
-                <>
-                  <button
-                    className="signal-approve-btn"
-                    onClick={() => handleApprove(sig.id)}
-                    disabled={acting === sig.id}
-                  >
-                    승인
-                  </button>
-                  <button
-                    className="signal-reject-btn"
-                    onClick={() => handleReject(sig.id)}
-                    disabled={acting === sig.id}
-                  >
-                    거부
-                  </button>
-                </>
-              ) : (
-                <span className={`signal-status status-${sig.status}`}>
-                  {sig.status}
-                </span>
-              )}
-            </div>
-          </div>
+          <SignalCard
+            key={sig.id}
+            signal={sig}
+            onApprove={sig.status === 'pending' ? handleApprove : undefined}
+            onReject={sig.status === 'pending' ? handleReject : undefined}
+            acting={acting === sig.id}
+          />
         ))}
       </div>
     </div>

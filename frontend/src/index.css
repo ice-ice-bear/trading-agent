@@ -164,3 +164,78 @@ body {
 #root {
   min-height: 100vh;
 }
+
+/* Signal enhancement — confidence grade badges */
+.grade-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.grade-a { background: #d4edda; color: #155724; }
+.grade-b { background: #fff3cd; color: #856404; }
+.grade-c { background: #fde8d8; color: #7d3c0a; }
+.grade-d { background: #f8d7da; color: #721c24; }
+
+/* Scenario cards */
+.scenario-row { display: flex; gap: 8px; margin: 8px 0; }
+.scenario-card {
+  flex: 1;
+  padding: 8px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 13px;
+}
+.scenario-bull { background: #d4edda; }
+.scenario-base { background: #e2e3e5; }
+.scenario-bear { background: #f8d7da; }
+.scenario-pct { font-size: 18px; font-weight: 700; margin: 4px 0; }
+.scenario-prob { font-size: 11px; color: #666; }
+
+/* Expert stances */
+.expert-panel { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.expert-chip {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.stance-bullish { background: #d4edda; color: #155724; }
+.stance-bearish { background: #f8d7da; color: #721c24; }
+.stance-neutral { background: #e2e3e5; color: #383d41; }
+
+/* Variant view */
+.variant-view {
+  font-style: italic;
+  font-size: 12px;
+  color: #555;
+  border-left: 3px solid #007bff;
+  padding-left: 8px;
+  margin: 8px 0;
+}
+
+/* KPI tiles */
+.kpi-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.kpi-tile {
+  flex: 1;
+  min-width: 80px;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  text-align: center;
+}
+.kpi-label { font-size: 10px; color: #888; margin-bottom: 2px; }
+.kpi-value { font-size: 16px; font-weight: 700; }
+
+/* scenario chart wrapper */
+.scenario-chart-wrapper { margin: 8px 0; }
+
+/* Mobile breakpoint */
+@media (max-width: 600px) {
+  .scenario-row { flex-direction: column; }
+  .scenario-chart-wrapper { display: none; }
+  .kpi-row { gap: 4px; }
+  .kpi-tile { min-width: 60px; }
+}
