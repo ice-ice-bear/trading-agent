@@ -1,5 +1,7 @@
 """Signals router — view, approve, reject trading signals."""
 
+import json
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -11,6 +13,23 @@ router = APIRouter(prefix="/api/signals", tags=["signals"])
 
 class SignalAction(BaseModel):
     reason: str = ""
+
+
+def _enrich_signal(row: dict) -> dict:
+    """Parse JSON columns from the signals DB row into Python objects."""
+    result = dict(row)
+    for json_col, out_key in [
+        ("scenarios_json", "scenarios"),
+        ("expert_stances_json", "expert_stances"),
+        ("dart_fundamentals_json", "dart_fundamentals"),
+        ("metadata_json", "metadata"),
+    ]:
+        raw = result.pop(json_col, None)
+        try:
+            result[out_key] = json.loads(raw) if raw else None
+        except (json.JSONDecodeError, TypeError):
+            result[out_key] = None
+    return result
 
 
 @router.get("")
@@ -26,7 +45,8 @@ async def list_signals(status: str | None = None, limit: int = 50):
             "SELECT * FROM signals ORDER BY timestamp DESC LIMIT ?",
             (limit,),
         )
-    return {"signals": rows or []}
+    signals = [_enrich_signal(dict(row)) for row in (rows or [])]
+    return {"signals": signals}
 
 
 @router.get("/{signal_id}")
@@ -35,7 +55,7 @@ async def get_signal(signal_id: int):
     rows = await execute_query("SELECT * FROM signals WHERE id=?", (signal_id,))
     if not rows:
         raise HTTPException(status_code=404, detail="Signal not found")
-    return rows[0]
+    return _enrich_signal(dict(rows[0]))
 
 
 @router.post("/{signal_id}/approve")
