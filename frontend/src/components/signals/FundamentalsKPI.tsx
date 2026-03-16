@@ -1,6 +1,6 @@
 // frontend/src/components/signals/FundamentalsKPI.tsx
 import React from 'react';
-import { DartFundamentals } from '../../types';
+import type { DartFundamentals } from '../../types';
 
 interface FundamentalsKPIProps {
   dartFundamentals: DartFundamentals;

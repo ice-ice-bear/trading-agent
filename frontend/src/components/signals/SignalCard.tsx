@@ -1,6 +1,6 @@
 // frontend/src/components/signals/SignalCard.tsx
 import React from 'react';
-import { Signal } from '../../types';
+import type { Signal } from '../../types';
 import { ScenarioChart } from './ScenarioChart';
 import { FundamentalsKPI } from './FundamentalsKPI';
 

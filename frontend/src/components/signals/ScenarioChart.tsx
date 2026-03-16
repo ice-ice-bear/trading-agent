@@ -1,6 +1,6 @@
 // frontend/src/components/signals/ScenarioChart.tsx
 import React from 'react';
-import { Scenario } from '../../types';
+import type { Scenario } from '../../types';
 
 interface ScenarioChartProps {
   currentPrice: number;
