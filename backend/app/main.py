@@ -5,7 +5,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import agents, chat, dashboard, health, reports, settings, signals, tasks, watchlist, ws
+from app.services.dart_client import dart_client
 from app.services.mcp_client import mcp_manager
+from app.agents.signal_critic import signal_critic
 
 logging.basicConfig(
     level=logging.INFO,
@@ -61,6 +63,11 @@ async def lifespan(app: FastAPI):
     from app.models.db import init_database
     logger.info("Initializing database...")
     await init_database()
+
+    # 1.5. Initialize DART client (refreshes corp code cache if stale)
+    logger.info("Initializing DART client...")
+    await dart_client.initialize()
+    app.state.signal_critic = signal_critic
 
     # 2. Connect to MCP server
     logger.info("Connecting to MCP server...")

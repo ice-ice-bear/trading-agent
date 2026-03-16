@@ -7,7 +7,10 @@ from app.agents.base import AgentContext, AgentResult, AgentRole, BaseAgent
 from app.agents.market_scanner_experts import run_chief_debate, run_expert_panel
 from app.agents.market_scanner_indicators import compute_all_indicators
 from app.agents.state import shared_state
+import json
+from app.models.confidence import check_hard_gate
 from app.models.db import execute_insert
+from app.services.dart_client import dart_client
 from app.services.market_service import (
     get_batch_charts,
     get_fluctuation_rank,
@@ -168,11 +171,11 @@ class MarketScannerAgent(BaseAgent):
         self, stock_data: dict, portfolio_context: dict
     ) -> dict | None:
         """단일 종목에 대해 전문가 팀 분석 + Chief 토론 → 신호 DB 저장."""
-        stock_info = {
-            "code": stock_data["stock_code"],
-            "name": stock_data.get("stock_name", ""),
-        }
+        stock_code = stock_data["stock_code"]
+        stock_name = stock_data.get("stock_name", "")
+        stock_info = {"code": stock_code, "name": stock_name}
         indicators = stock_data.get("indicators", {})
+        current_price = stock_data.get("current_price", 0)
 
         data_package = {
             "stock": stock_info,
@@ -180,37 +183,107 @@ class MarketScannerAgent(BaseAgent):
             "portfolio_context": portfolio_context,
         }
 
+        # --- Stage 2.5: Confidence grading ---
+        confidence_grades: dict[str, str] = {
+            "current_price": "A" if current_price else "D",
+            "volume": "A" if indicators.get("volume", 0) > 0 else "D",
+        }
+
+        # --- Stage 2.6: Fetch DART fundamentals ---
+        dart_result = await dart_client.fetch(stock_code)
+        dart_financials = dart_result.get("financials")
+        confidence_grades.update(dart_result.get("confidence_grades", {}))
+
+        # --- Stage 2.7: Hard gate check ---
+        gate_passed, failed_fields = check_hard_gate(confidence_grades)
+        if not gate_passed:
+            await self._reject_signal_confidence(stock_info, confidence_grades, failed_fields)
+            return None
+
+        # Update data_package with dart_financials for the 5th expert
+        data_package["dart_financials"] = dart_financials
+
         # Stage 3: 전문가 병렬 분석
-        expert_analyses = await run_expert_panel(data_package)
+        expert_analyses = await run_expert_panel(data_package, dart_financials=dart_financials)
         if not expert_analyses:
             return None
 
-        # Stage 4: Chief 토론
-        final = await run_chief_debate(stock_info, expert_analyses, portfolio_context)
-        if not final:
+        # Stage 4: Chief 토론 (returns SignalAnalysis)
+        signal_analysis = await run_chief_debate(
+            stock_info, expert_analyses, portfolio_context,
+            dart_financials=dart_financials,
+            critic_feedback=None,
+        )
+        if not signal_analysis:
             return None
 
-        confidence = float(final.get("confidence", 0))
-        decision = final.get("decision", "hold")
+        if signal_analysis.direction == "HOLD":
+            return None  # hold 신호는 저장하지 않음
 
-        if decision == "hold" or confidence < 0.7:
-            return None  # hold 또는 낮은 신뢰도는 신호 없음
-
-        # DB 저장
+        # DB 저장 (critic 루프는 Task 8에서 추가)
         signal_id = await execute_insert(
             """INSERT INTO signals
-               (agent_id, stock_code, stock_name, direction, confidence, reason, status)
-               VALUES (?, ?, ?, ?, ?, ?, 'pending')""",
+               (agent_id, stock_code, stock_name, direction, confidence, reason, status,
+                scenarios_json, variant_view, rr_score, current_price, expert_stances_json,
+                dart_fundamentals_json, critic_result)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 self.agent_id,
-                stock_info["code"],
-                stock_info["name"],
-                decision,
-                confidence,
-                final.get("reason", ""),
+                stock_code,
+                stock_name,
+                signal_analysis.direction.lower(),
+                round(1 / (1 + (2.718 ** (-signal_analysis.rr_score / 2))), 4),
+                signal_analysis.variant_view[:200],
+                "pending",
+                json.dumps({
+                    "bull": signal_analysis.bull.model_dump(),
+                    "base": signal_analysis.base.model_dump(),
+                    "bear": signal_analysis.bear.model_dump(),
+                }),
+                signal_analysis.variant_view,
+                signal_analysis.rr_score,
+                current_price,
+                json.dumps(signal_analysis.expert_stances),
+                json.dumps(dart_financials) if dart_financials else None,
+                "pending",  # critic_result — Task 8 will set to "pass"
             ),
         )
 
-        saved = {**final, "signal_id": signal_id}
-        await self.emit_event("signal.generated", saved)
-        return saved
+        await self.emit_event("signal.generated", {
+            "signal_id": signal_id,
+            "stock_code": stock_code,
+            "stock_name": stock_name,
+            "direction": signal_analysis.direction.lower(),
+            "confidence": round(1 / (1 + (2.718 ** (-signal_analysis.rr_score / 2))), 4),
+            "rr_score": signal_analysis.rr_score,
+            "critic_result": "pending",
+        })
+        return {"signal_id": signal_id, "stock_code": stock_code, "direction": signal_analysis.direction}
+
+    async def _reject_signal_confidence(
+        self,
+        stock_info: dict,
+        confidence_grades: dict,
+        failed_fields: list[str],
+    ) -> None:
+        """Write a failed signal row and emit signal.failed."""
+        metadata = json.dumps({"reason": "confidence_gate", "failed_fields": failed_fields})
+        await execute_insert(
+            """INSERT INTO signals
+               (agent_id, stock_code, stock_name, direction, confidence, status, metadata_json)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (
+                self.agent_id,
+                stock_info.get("code", ""),
+                stock_info.get("name", ""),
+                "hold",
+                0.0,
+                "failed",
+                metadata,
+            ),
+        )
+        await self.emit_event("signal.failed", {
+            "stock_code": stock_info.get("code"),
+            "reason": "confidence_gate",
+            "failed_fields": failed_fields,
+        })
