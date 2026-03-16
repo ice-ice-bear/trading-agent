@@ -29,6 +29,23 @@ async def init_database() -> None:
     try:
         await db.executescript(SCHEMA_SQL)
 
+        # --- Migration guards for existing databases ---
+        _ALTER_STATEMENTS = [
+            "ALTER TABLE signals ADD COLUMN scenarios_json TEXT",
+            "ALTER TABLE signals ADD COLUMN variant_view TEXT",
+            "ALTER TABLE signals ADD COLUMN rr_score REAL",
+            "ALTER TABLE signals ADD COLUMN current_price REAL",
+            "ALTER TABLE signals ADD COLUMN expert_stances_json TEXT",
+            "ALTER TABLE signals ADD COLUMN dart_fundamentals_json TEXT",
+            "ALTER TABLE signals ADD COLUMN metadata_json TEXT",
+            "ALTER TABLE signals ADD COLUMN critic_result TEXT",
+        ]
+        for stmt in _ALTER_STATEMENTS:
+            try:
+                await db.execute(stmt)
+            except Exception:
+                pass  # column already exists — safe to ignore
+
         # Seed default risk config
         for key, value in DEFAULT_RISK_CONFIG.items():
             await db.execute(
