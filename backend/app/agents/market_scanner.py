@@ -8,7 +8,9 @@ from app.agents.market_scanner_experts import run_chief_debate, run_expert_panel
 from app.agents.market_scanner_indicators import compute_all_indicators
 from app.agents.state import shared_state
 import json
+from app.agents.signal_critic import signal_critic
 from app.models.confidence import check_hard_gate
+from app.models.signal import compute_rr_score
 from app.models.db import execute_insert
 from app.services.dart_client import dart_client
 from app.services.market_service import (
@@ -208,19 +210,69 @@ class MarketScannerAgent(BaseAgent):
         if not expert_analyses:
             return None
 
-        # Stage 4: Chief 토론 (returns SignalAnalysis)
+        # --- Stage 4: Chief Analyst debate ---
         signal_analysis = await run_chief_debate(
             stock_info, expert_analyses, portfolio_context,
             dart_financials=dart_financials,
             critic_feedback=None,
         )
         if not signal_analysis:
+            logger.warning(f"Chief debate returned None for {stock_code}")
             return None
 
         if signal_analysis.direction == "HOLD":
             return None  # hold 신호는 저장하지 않음
 
-        # DB 저장 (critic 루프는 Task 8에서 추가)
+        # Server overrides rr_score (LLM value is discarded)
+        signal_analysis.rr_score = compute_rr_score(
+            signal_analysis.bull, signal_analysis.base, signal_analysis.bear
+        )
+
+        # --- Stage 5: Critic review ---
+        critic_passed, critic_feedback = await signal_critic.review(
+            signal_analysis, expert_analyses, confidence_grades
+        )
+
+        if not critic_passed:
+            # One revision attempt — re-run Chief with critique injected
+            logger.info(f"Critic failed for {stock_code}, requesting revision...")
+            signal_analysis = await run_chief_debate(
+                stock_info, expert_analyses, portfolio_context,
+                dart_financials=dart_financials,
+                critic_feedback=critic_feedback,
+            )
+            if signal_analysis:
+                signal_analysis.rr_score = compute_rr_score(
+                    signal_analysis.bull, signal_analysis.base, signal_analysis.bear
+                )
+                critic_passed, critic_feedback = await signal_critic.review(
+                    signal_analysis, expert_analyses, confidence_grades
+                )
+
+        if not critic_passed or not signal_analysis:
+            # Final rejection
+            await execute_insert(
+                """INSERT INTO signals
+                   (agent_id, stock_code, stock_name, direction, confidence,
+                    reason, status, metadata_json, critic_result)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    self.agent_id,
+                    stock_code,
+                    stock_name,
+                    "hold",
+                    0.0,
+                    "critic_failed",
+                    "rejected",
+                    json.dumps({"reason": "critic_failed", "feedback": critic_feedback}),
+                    "fail",
+                ),
+            )
+            return None
+
+        signal_analysis.critic_result = "pass"
+
+        # --- Stage 6: Persist signal and emit ---
         signal_id = await execute_insert(
             """INSERT INTO signals
                (agent_id, stock_code, stock_name, direction, confidence, reason, status,
@@ -245,7 +297,7 @@ class MarketScannerAgent(BaseAgent):
                 current_price,
                 json.dumps(signal_analysis.expert_stances),
                 json.dumps(dart_financials) if dart_financials else None,
-                "pending",  # critic_result — Task 8 will set to "pass"
+                "pass",
             ),
         )
 
@@ -256,7 +308,7 @@ class MarketScannerAgent(BaseAgent):
             "direction": signal_analysis.direction.lower(),
             "confidence": round(1 / (1 + (2.718 ** (-signal_analysis.rr_score / 2))), 4),
             "rr_score": signal_analysis.rr_score,
-            "critic_result": "pending",
+            "critic_result": "pass",
         })
         return {"signal_id": signal_id, "stock_code": stock_code, "direction": signal_analysis.direction}
 
