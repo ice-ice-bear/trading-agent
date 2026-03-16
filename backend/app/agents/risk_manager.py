@@ -186,6 +186,18 @@ class RiskManagerAgent(BaseAgent):
         direction = signal.get("direction", "")
         stock_code = signal.get("stock_code", "")
 
+        # --- NEW: R/R score gate ---
+        rr_score = signal.get("rr_score")
+        if rr_score is not None:
+            min_rr = float(risk_config.get("min_rr_score", "2.0"))
+            if rr_score < min_rr:
+                return f"R/R 점수 미달 ({rr_score:.2f} < {min_rr:.1f})"
+
+        # --- NEW: Critic result gate ---
+        critic_result = signal.get("critic_result")
+        if critic_result is not None and critic_result != "pass":
+            return f"Critic 검증 미통과 ({critic_result})"
+
         # Check max positions (for buy signals only)
         if direction == "buy":
             max_positions = int(risk_config.get("max_positions", 5))
@@ -228,4 +240,5 @@ class RiskManagerAgent(BaseAgent):
                 "max_position_weight_pct": "20.0",
                 "max_daily_loss": "500000",
                 "signal_approval_mode": "auto",
+                "min_rr_score": "2.0",
             }
