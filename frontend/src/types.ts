@@ -72,16 +72,42 @@ export interface Order {
   reason?: string;
 }
 
+export interface Scenario {
+  label: string;
+  price_target: number;
+  upside_pct: number;
+  probability: number;
+}
+
+export interface DartFundamentals {
+  dart_per: number | null;
+  dart_pbr: number | null;
+  dart_eps_yoy_pct: number | null;
+  dart_debt_ratio: number | null;
+  dart_operating_margin: number | null;
+  dart_dividend_yield: number | null;
+}
+
 export interface Signal {
   id: number;
   timestamp: string;
   agent_id: string;
   stock_code: string;
   stock_name: string;
-  direction: 'buy' | 'sell';
+  direction: 'buy' | 'sell' | 'hold';
   confidence: number;
   reason?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'executed';
+  status: 'pending' | 'approved' | 'rejected' | 'executed' | 'failed';
+  risk_notes?: string;
+  // New enhancement fields (optional for backward compat)
+  current_price?: number;
+  scenarios?: { bull: Scenario; base: Scenario; bear: Scenario };
+  rr_score?: number;
+  variant_view?: string;
+  confidence_grades?: Record<string, string>;
+  expert_stances?: Record<string, string>;
+  critic_result?: string;
+  dart_fundamentals?: DartFundamentals;
 }
 
 export interface Agent {

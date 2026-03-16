@@ -48,11 +48,19 @@ CREATE TABLE IF NOT EXISTS signals (
     agent_id TEXT NOT NULL,
     stock_code TEXT NOT NULL,
     stock_name TEXT NOT NULL DEFAULT '',
-    direction TEXT NOT NULL CHECK(direction IN ('buy', 'sell')),
+    direction TEXT NOT NULL CHECK(direction IN ('buy', 'sell', 'hold')),
     confidence REAL NOT NULL DEFAULT 0.0,
     reason TEXT,
-    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected', 'executed')),
-    risk_notes TEXT
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected', 'executed', 'failed')),
+    risk_notes TEXT,
+    scenarios_json TEXT,
+    variant_view TEXT,
+    rr_score REAL,
+    current_price REAL,
+    expert_stances_json TEXT,
+    dart_fundamentals_json TEXT,
+    metadata_json TEXT,
+    critic_result TEXT
 );
 
 CREATE TABLE IF NOT EXISTS agent_logs (
@@ -124,6 +132,20 @@ CREATE TABLE IF NOT EXISTS kospi200_components (
     sector TEXT,
     updated_at TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS dart_corp_codes (
+    stock_code TEXT PRIMARY KEY,
+    corp_code TEXT NOT NULL,
+    corp_name TEXT,
+    cached_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS dart_financials_cache (
+    stock_code TEXT NOT NULL,
+    cache_date TEXT NOT NULL,
+    financials_json TEXT NOT NULL,
+    PRIMARY KEY (stock_code, cache_date)
+);
 """
 
 # Default risk configuration values
@@ -134,6 +156,7 @@ DEFAULT_RISK_CONFIG = {
     "max_position_weight_pct": "20.0",
     "max_daily_loss": "500000",
     "signal_approval_mode": "auto",
+    "min_rr_score": "2.0",
 }
 
 # Default scheduled tasks

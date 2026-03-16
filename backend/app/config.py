@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     mcp_server_url: str = "http://localhost:3000/sse"
     claude_model: str = "claude-sonnet-4-5-20250929"
     claude_max_tokens: int = 4096
+    dart_api_key: str | None = None
 
     model_config = {"env_file": os.getenv("ENV_FILE", ".env"), "env_file_encoding": "utf-8", "extra": "ignore"}
 
