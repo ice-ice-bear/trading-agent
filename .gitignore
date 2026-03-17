@@ -94,3 +94,7 @@ temp/
 
 # Git worktrees
 .worktrees/
+
+# Tool-generated local data
+.playwright-mcp/
+.superpowers/
