@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 interface HistoryPoint {
   timestamp: string;
@@ -8,17 +8,29 @@ interface HistoryPoint {
   total_pnl_pct: number;
 }
 
-export default function PerformanceChart() {
+interface Props {
+  refreshTrigger?: number;
+}
+
+export default function PerformanceChart({ refreshTrigger }: Props) {
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchHistory = useCallback(() => {
     fetch('/api/reports/performance/history?days=30')
       .then((res) => res.json())
       .then((data) => setHistory(data.history || []))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  useEffect(() => {
+    if (refreshTrigger && refreshTrigger > 0) fetchHistory();
+  }, [refreshTrigger, fetchHistory]);
 
   if (loading) {
     return (

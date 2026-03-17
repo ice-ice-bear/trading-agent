@@ -3,7 +3,11 @@ import type { Signal } from '../../types';
 import { getSignals, approveSignal, rejectSignal } from '../../services/api';
 import { SignalCard } from '../signals/SignalCard';
 
-export default function SignalPanel() {
+interface Props {
+  refreshTrigger?: number;
+}
+
+export default function SignalPanel({ refreshTrigger }: Props) {
   const [signals, setSignals] = useState<Signal[]>([]);
   const [acting, setActing] = useState<number | null>(null);
 
@@ -15,9 +19,14 @@ export default function SignalPanel() {
 
   useEffect(() => {
     fetchSignals();
-    const interval = setInterval(fetchSignals, 10000);
+    const interval = setInterval(fetchSignals, 60000);
     return () => clearInterval(interval);
   }, [fetchSignals]);
+
+  // Refetch on external trigger (WS event)
+  useEffect(() => {
+    if (refreshTrigger && refreshTrigger > 0) fetchSignals();
+  }, [refreshTrigger, fetchSignals]);
 
   const handleApprove = async (id: number) => {
     setActing(id);

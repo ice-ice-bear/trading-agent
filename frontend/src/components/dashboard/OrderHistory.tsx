@@ -1,22 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import type { Order } from '../../types';
 import { getOrders } from '../../services/api';
 
-export default function OrderHistory() {
+interface Props {
+  refreshTrigger?: number;
+}
+
+export default function OrderHistory({ refreshTrigger }: Props) {
   const [orders, setOrders] = useState<Order[]>([]);
 
-  useEffect(() => {
+  const fetchOrders = useCallback(() => {
     getOrders(20)
       .then((data) => setOrders(data.orders))
       .catch(console.error);
-
-    const interval = setInterval(() => {
-      getOrders(20)
-        .then((data) => setOrders(data.orders))
-        .catch(console.error);
-    }, 15000);
-    return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    fetchOrders();
+    const interval = setInterval(fetchOrders, 60000);
+    return () => clearInterval(interval);
+  }, [fetchOrders]);
+
+  useEffect(() => {
+    if (refreshTrigger && refreshTrigger > 0) fetchOrders();
+  }, [refreshTrigger, fetchOrders]);
 
   if (orders.length === 0) {
     return (
