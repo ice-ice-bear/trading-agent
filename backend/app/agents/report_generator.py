@@ -46,14 +46,9 @@ class ReportGeneratorAgent(BaseAgent):
         # 2. Generate report with Claude
         report_content = await self._generate_with_claude(data, report_type, period_start, period_end)
 
-        # 3. Save report to DB
-        summary_json = json.dumps({
-            "total_trades": data.get("total_trades", 0),
-            "filled_trades": data.get("filled_trades", 0),
-            "total_signals": data.get("total_signals", 0),
-            "latest_pnl": data.get("latest_pnl", 0),
-            "latest_pnl_pct": data.get("latest_pnl_pct", 0),
-        }, ensure_ascii=False)
+        # 2.5 Compute structured summary
+        summary = self._compute_summary(data)
+        summary_json = json.dumps(summary, ensure_ascii=False)
 
         report_id = await execute_insert(
             """INSERT INTO reports
@@ -82,6 +77,79 @@ class ReportGeneratorAgent(BaseAgent):
             summary=f"{'일일' if report_type == 'daily' else '주간'} 리포트 생성 완료 (ID: {report_id})",
             data={"report_id": report_id, "report_type": report_type},
         )
+
+    def _compute_summary(self, data: dict) -> dict:
+        """Compute structured summary from raw report data. No LLM needed."""
+        snapshots = data.get("snapshots", [])
+        orders = data.get("orders", [])
+        signals = data.get("signals", [])
+
+        # --- KPIs ---
+        filled_orders = [o for o in orders if o.get("status") == "filled"]
+        trade_count = len(filled_orders)
+
+        win_rate = 0.0
+
+        # Max drawdown from snapshot series
+        max_drawdown_pct = 0.0
+        if len(snapshots) >= 2:
+            peak = snapshots[0].get("total_value", 0)
+            for snap in snapshots[1:]:
+                val = snap.get("total_value", 0)
+                if val > peak:
+                    peak = val
+                elif peak > 0:
+                    dd = (peak - val) / peak * 100
+                    if dd > max_drawdown_pct:
+                        max_drawdown_pct = dd
+
+        # Signal approval rate
+        approved = sum(1 for s in signals if s.get("status") in ("approved", "executed"))
+        signal_approval_rate = (approved / len(signals) * 100) if signals else 0.0
+
+        kpis = {
+            "total_pnl": data.get("latest_pnl", 0),
+            "total_pnl_pct": data.get("latest_pnl_pct", 0),
+            "trade_count": trade_count,
+            "win_rate": round(win_rate, 2),
+            "max_drawdown_pct": round(max_drawdown_pct, 2),
+            "signal_count": len(signals),
+            "signal_approval_rate": round(signal_approval_rate, 2),
+        }
+
+        # --- Trades ---
+        trades = [
+            {
+                "stock_name": o.get("stock_name", o.get("stock_code", "")),
+                "side": o.get("side", "buy"),
+                "quantity": o.get("quantity", 0),
+                "price": o.get("fill_price") or o.get("price", 0),
+                "pnl": None,
+                "timestamp": o.get("timestamp", ""),
+            }
+            for o in filled_orders
+        ]
+
+        # --- Signal summaries ---
+        signal_summaries = [
+            {
+                "stock_name": s.get("stock_name", s.get("stock_code", "")),
+                "direction": s.get("direction", ""),
+                "rr_score": s.get("rr_score"),
+                "status": s.get("status", ""),
+            }
+            for s in signals
+        ]
+
+        # --- Risk events ---
+        risk_events: list[dict] = []
+
+        return {
+            "kpis": kpis,
+            "trades": trades,
+            "signals": signal_summaries,
+            "risk_events": risk_events,
+        }
 
     async def _gather_report_data(self, period_start: str, period_end: str) -> dict:
         """Collect all relevant data for the report period."""
