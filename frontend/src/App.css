@@ -6,151 +6,6 @@
   position: relative;
 }
 
-/* ===== Sidebar ===== */
-.sidebar {
-  width: 300px;
-  background: var(--color-sidebar);
-  color: var(--color-sidebar-text);
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  transition: width var(--transition-normal), transform var(--transition-normal);
-  z-index: 100;
-}
-
-.sidebar-header {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--color-sidebar-hover);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.sidebar-logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--color-text-inverse);
-}
-
-.new-chat-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: transparent;
-  color: var(--color-sidebar-text-muted);
-  border: 1px solid var(--color-sidebar-active);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.new-chat-btn:hover {
-  background: var(--color-sidebar-hover);
-  color: var(--color-text-inverse);
-  border-color: #4b5563;
-}
-
-.session-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-2);
-}
-
-.session-item {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  margin-bottom: 2px;
-  background: transparent;
-  color: var(--color-sidebar-text-muted);
-  border-radius: var(--radius-sm);
-  transition: all var(--transition-fast);
-  position: relative;
-}
-
-.session-item-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  background: transparent;
-  color: inherit;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  text-align: left;
-  font-size: var(--text-sm);
-  font-family: var(--font-sans);
-  min-width: 0;
-}
-
-.session-delete-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--color-sidebar-text-muted);
-  cursor: pointer;
-  opacity: 0;
-  transition: all var(--transition-fast);
-  flex-shrink: 0;
-  margin-right: 4px;
-}
-
-.session-item:hover .session-delete-btn {
-  opacity: 0.7;
-}
-
-.session-delete-btn:hover {
-  opacity: 1 !important;
-  background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-}
-
-.session-item:hover {
-  background: var(--color-sidebar-hover);
-  color: var(--color-border);
-}
-
-.session-item.active {
-  background: var(--color-sidebar-active);
-  color: var(--color-text-inverse);
-}
-
-.session-item.active .session-delete-btn {
-  opacity: 0.5;
-}
-
-.session-icon {
-  flex-shrink: 0;
-  opacity: 0.5;
-}
-
-.session-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-}
-
-.session-count {
-  font-size: var(--text-xs);
-  background: var(--color-badge-bg);
-  color: var(--color-sidebar-text-muted);
-  padding: 1px 6px;
-  border-radius: var(--radius-md);
-  flex-shrink: 0;
-}
 
 /* ===== Main Content ===== */
 .app-main {
@@ -968,13 +823,11 @@
 }
 
 /* ===== Custom Scrollbars ===== */
-.messages-container::-webkit-scrollbar,
-.session-list::-webkit-scrollbar {
+.messages-container::-webkit-scrollbar {
   width: 6px;
 }
 
-.messages-container::-webkit-scrollbar-track,
-.session-list::-webkit-scrollbar-track {
+.messages-container::-webkit-scrollbar-track {
   background: transparent;
 }
 
@@ -987,57 +840,13 @@
   background: rgba(0, 0, 0, 0.2);
 }
 
-.session-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-}
-
-.messages-container,
-.session-list {
+.messages-container {
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
 }
 
-/* ===== Sidebar Overlay (Mobile) ===== */
-.sidebar-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 99;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--transition-normal);
-}
-
-.sidebar-overlay.visible {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* ===== Desktop Sidebar Collapse ===== */
-@media (min-width: 769px) {
-  .sidebar.collapsed {
-    width: 0;
-    overflow: hidden;
-    padding: 0;
-  }
-}
-
 /* ===== Mobile Responsive ===== */
 @media (max-width: 768px) {
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    width: 300px;
-    transform: translateX(-100%);
-  }
-
-  .sidebar.open {
-    transform: translateX(0);
-  }
-
   .input-bar {
     padding: var(--space-3) var(--space-3) var(--space-4);
   }
@@ -1640,34 +1449,6 @@
   border: 1px solid var(--color-error);
 }
 
-/* Sidebar Footer */
-.sidebar-footer {
-  padding: var(--space-2);
-  border-top: 1px solid var(--color-sidebar-hover);
-}
-
-.sidebar-footer .sidebar-settings-btn {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  background: transparent;
-  color: var(--color-sidebar-text-muted);
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: var(--text-sm);
-  font-family: var(--font-sans);
-  text-align: left;
-  transition: all var(--transition-fast);
-}
-
-.sidebar-footer .sidebar-settings-btn:hover {
-  background: var(--color-sidebar-hover);
-  color: var(--color-sidebar-text);
-}
-
 /* Settings Mobile */
 @media (max-width: 768px) {
   .settings-inner {
@@ -2146,34 +1927,6 @@
   100% { background-position: -200% 0; }
 }
 
-
-/* Sidebar Nav Link */
-.sidebar-nav-link {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  background: transparent;
-  color: var(--color-sidebar-text-muted);
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: var(--text-sm);
-  font-family: var(--font-sans);
-  text-align: left;
-  transition: all var(--transition-fast);
-}
-
-.sidebar-nav-link:hover {
-  background: var(--color-sidebar-hover);
-  color: var(--color-sidebar-text);
-}
-
-.sidebar-nav-link.active {
-  background: var(--color-sidebar-active);
-  color: var(--color-text-inverse);
-}
 
 /* ===== Phase 2: Trading Components ===== */
 
