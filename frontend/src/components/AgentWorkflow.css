@@ -1,5 +1,241 @@
+/* === Agent Workflow Page === */
 .agent-workflow {
   padding: 20px;
   height: 100%;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* === DAG Container === */
+.dag-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  padding: 24px 16px;
+  background: var(--bg-secondary, #1a1a2e);
+  border-radius: 12px;
+  border: 1px solid var(--border, #2a2a3e);
+}
+
+.dag-row {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 16px;
+}
+
+.dag-node-spacer {
+  flex: 1;
+  max-width: 200px;
+}
+
+/* === DAG Node === */
+.dag-node {
+  flex: 1;
+  max-width: 200px;
+  padding: 12px;
+  background: var(--bg-primary, #0f0f1a);
+  border: 2px solid var(--border, #2a2a3e);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dag-node:hover {
+  border-color: var(--accent, #6366f1);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.15);
+}
+
+.dag-node--selected {
+  border-color: var(--accent, #6366f1);
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.25);
+}
+
+.dag-node--unavailable {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.dag-node--pulse {
+  animation: dagPulse 1s ease-out;
+}
+
+@keyframes dagPulse {
+  0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.5); }
+  100% { box-shadow: 0 0 0 12px rgba(99, 102, 241, 0); }
+}
+
+.dag-node-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dag-node-status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dag-node-status.status-idle { background: #22c55e; }
+.dag-node-status.status-running { background: #3b82f6; animation: statusBlink 1s infinite; }
+.dag-node-status.status-error { background: #ef4444; }
+.dag-node-status.status-disabled { background: #6b7280; }
+
+@keyframes statusBlink {
+  50% { opacity: 0.4; }
+}
+
+.dag-node-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #e2e8f0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dag-node-body {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 20px;
+}
+
+.dag-node-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.badge-ok { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+.badge-err { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
+.dag-node-info {
+  font-size: 11px;
+  color: var(--text-secondary, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dag-node-run-btn {
+  align-self: flex-end;
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border, #2a2a3e);
+  background: transparent;
+  color: var(--text-secondary, #94a3b8);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.dag-node-run-btn:hover:not(:disabled) {
+  background: var(--accent, #6366f1);
+  color: #fff;
+  border-color: var(--accent, #6366f1);
+}
+
+.dag-node-run-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* === DAG Arrows === */
+.dag-arrows {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.dag-arrow {
+  position: absolute;
+  background: var(--text-secondary, #94a3b8);
+  opacity: 0.3;
+}
+
+/* Horizontal arrows: PortMon → Risk, Risk → Executor */
+.arrow-pm-rm,
+.arrow-rm-te {
+  height: 2px;
+  top: calc(24px + 40px);
+  width: 40px;
+}
+
+.arrow-pm-rm { left: calc(33.3% - 8px); }
+.arrow-rm-te { left: calc(66.6% - 8px); }
+
+.arrow-pm-rm::after,
+.arrow-rm-te::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  top: -3px;
+  border: 4px solid transparent;
+  border-left: 6px solid var(--text-secondary, #94a3b8);
+  opacity: 0.3;
+}
+
+/* Diagonal arrow: Scanner → Risk */
+.arrow-ms-rm {
+  height: 2px;
+  width: 60px;
+  top: 55%;
+  left: 28%;
+  transform: rotate(-35deg);
+  transform-origin: left center;
+}
+
+.arrow-ms-rm::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  top: -3px;
+  border: 4px solid transparent;
+  border-left: 6px solid var(--text-secondary, #94a3b8);
+  opacity: 0.3;
+}
+
+/* === Loading / Error states === */
+.loading-text {
+  color: var(--text-secondary, #94a3b8);
+  padding: 40px;
+  text-align: center;
+}
+
+.error-state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 40px;
+  justify-content: center;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.retry-btn {
+  padding: 4px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border, #2a2a3e);
+  background: transparent;
+  color: var(--text-secondary, #94a3b8);
+  cursor: pointer;
+}
+
+.retry-btn:hover {
+  background: var(--accent, #6366f1);
+  color: #fff;
+  border-color: var(--accent, #6366f1);
 }

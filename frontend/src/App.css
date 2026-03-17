@@ -1700,6 +1700,13 @@
   }
 }
 
+/* ===== Agent Workflow ===== */
+
+.agent-workflow {
+  flex: 1;
+  min-height: 0;
+}
+
 /* ===== Dashboard ===== */
 
 .dashboard-view {
