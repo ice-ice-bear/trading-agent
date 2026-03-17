@@ -7,6 +7,7 @@ import HeaderBar from './components/HeaderBar';
 import ChatView from './components/ChatView';
 import SettingsView from './components/SettingsView';
 import DashboardView from './components/DashboardView';
+import ReportViewer from './components/ReportViewer';
 import './App.css';
 
 const STORAGE_KEYS = {
@@ -129,7 +130,7 @@ function App() {
 
   return (
     <div className="app-layout">
-      {currentView !== 'dashboard' && (
+      {currentView !== 'dashboard' && currentView !== 'reports' && (
         <>
           <div
             className={`sidebar-overlay ${sidebarOpen ? 'visible' : ''}`}
@@ -143,6 +144,7 @@ function App() {
             onDeleteSession={handleDeleteSession}
             onOpenSettings={() => setCurrentView('settings')}
             onOpenDashboard={() => setCurrentView('dashboard')}
+            onOpenReports={() => setCurrentView('reports')}
             currentView={currentView}
             className={sidebarOpen ? 'open' : 'collapsed'}
           />
@@ -158,6 +160,7 @@ function App() {
           onOpenSettings={() => setCurrentView('settings')}
           onOpenDashboard={() => setCurrentView('dashboard')}
           onOpenChat={() => setCurrentView('chat')}
+          onOpenReports={() => setCurrentView('reports')}
           currentView={currentView}
           tradingMode={settings.trading_mode}
           onNewChat={handleNewChat}
@@ -171,6 +174,8 @@ function App() {
           />
         ) : currentView === 'dashboard' ? (
           <DashboardView />
+        ) : currentView === 'reports' ? (
+          <ReportViewer />
         ) : (
           <ChatView
             sessionId={activeSessionId}
