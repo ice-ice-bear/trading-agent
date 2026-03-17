@@ -249,8 +249,9 @@
 }
 
 .detail-panel--open {
-  max-height: 300px;
+  max-height: 500px;
   opacity: 1;
+  overflow-y: auto;
 }
 
 .detail-panel {
