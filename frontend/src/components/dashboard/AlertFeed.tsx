@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import type { AgentEvent } from '../../types';
+import { getAgentEvents } from '../../services/api';
 
 interface Props {
   events: AgentEvent[];
@@ -16,8 +18,27 @@ const EVENT_ICONS: Record<string, string> = {
   'report.generated': '#',
 };
 
-export default function AlertFeed({ events }: Props) {
-  const recent = events.slice(-20).reverse();
+export default function AlertFeed({ events: liveEvents }: Props) {
+  const [persistedEvents, setPersistedEvents] = useState<AgentEvent[]>([]);
+
+  useEffect(() => {
+    getAgentEvents(50)
+      .then((data) => setPersistedEvents(data.events))
+      .catch(console.error);
+  }, []);
+
+  // Merge: persisted (oldest first) + live events, dedup by timestamp+type
+  const seen = new Set<string>();
+  const merged: AgentEvent[] = [];
+  for (const evt of [...persistedEvents, ...liveEvents]) {
+    const key = `${evt.timestamp}:${evt.event_type}:${evt.agent_id}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(evt);
+    }
+  }
+
+  const recent = merged.slice(-30).reverse();
 
   return (
     <div className="dashboard-card alert-feed">
