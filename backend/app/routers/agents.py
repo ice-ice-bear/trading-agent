@@ -1,5 +1,7 @@
 """Agent management API router."""
 
+import json
+
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
@@ -44,7 +46,24 @@ async def get_agent_logs(
 
 @router.get("/events")
 async def get_agent_events(limit: int = Query(default=100, ge=1, le=1000)):
-    """Get recent events from the event bus."""
+    """Get recent events — from DB if available, falling back to in-memory."""
+    try:
+        rows = await execute_query(
+            "SELECT event_type, agent_id, data, timestamp FROM agent_events ORDER BY id DESC LIMIT ?",
+            (limit,),
+        )
+        if rows:
+            events = []
+            for row in rows:
+                evt = dict(row)
+                try:
+                    evt["data"] = json.loads(evt["data"]) if evt["data"] else {}
+                except (json.JSONDecodeError, TypeError):
+                    evt["data"] = {}
+                events.append(evt)
+            return {"events": events}
+    except Exception:
+        pass  # table may not exist yet — fall back
     events = event_bus.get_history(limit)
     return {"events": events}
 
