@@ -415,31 +415,31 @@ export default function AgentWorkflow() {
     <div className="agent-workflow">
       {/* Section 1: DAG */}
       <div className="dag-container">
-        <div className="dag-section-label">Agent Pipeline</div>
-        <div className="dag-row">
-          {DAG_LAYOUT.row1.map((id) => (
-            <DagNode
-              key={id}
-              agent={getAgentById(id)}
-              agentId={id}
-              lastLog={getLastLog(id)}
-              selected={selectedAgent === id}
-              pulsing={pulsingAgent === id}
-              running={runningAgent === id}
-              onClick={() => setSelectedAgent(selectedAgent === id ? null : id)}
-              onRun={() => handleRunAgent(id)}
-            />
-          ))}
+        <div className="dag-header">
+          <div className="dag-header-left">
+            <span className="dag-header-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="5" cy="12" r="2" /><circle cx="12" cy="6" r="2" /><circle cx="12" cy="18" r="2" /><circle cx="19" cy="12" r="2" />
+                <line x1="7" y1="12" x2="10" y2="7" /><line x1="7" y1="12" x2="10" y2="17" /><line x1="14" y1="7" x2="17" y2="11" /><line x1="14" y1="17" x2="17" y2="13" />
+              </svg>
+            </span>
+            <span className="dag-header-title">Agent Pipeline</span>
+          </div>
+          <div className="dag-header-stats">
+            <span className="dag-stat">
+              <span className="dag-stat-dot dag-stat-dot--active" />
+              {agents.filter(a => a.status === 'idle' || a.status === 'running').length} active
+            </span>
+            <span className="dag-stat">
+              {logs.length > 0 ? `Last run ${timeAgo(logs[0].timestamp)}` : 'No runs yet'}
+            </span>
+          </div>
         </div>
-        {/* Arrows rendered via CSS */}
-        <div className="dag-arrows">
-          <div className="dag-arrow arrow-pm-rm" />
-          <div className="dag-arrow arrow-rm-te" />
-          <div className="dag-arrow arrow-ms-rm" />
-        </div>
-        <div className="dag-row">
-          {DAG_LAYOUT.row2.map((id, i) =>
-            id ? (
+
+        <div className="dag-row-group">
+          <div className="dag-row-label">Main Pipeline</div>
+          <div className="dag-row">
+            {DAG_LAYOUT.row1.map((id) => (
               <DagNode
                 key={id}
                 agent={getAgentById(id)}
@@ -451,10 +451,46 @@ export default function AgentWorkflow() {
                 onClick={() => setSelectedAgent(selectedAgent === id ? null : id)}
                 onRun={() => handleRunAgent(id)}
               />
-            ) : (
-              <div key={`spacer-${i}`} className="dag-node-spacer" />
-            )
-          )}
+            ))}
+          </div>
+          {/* Arrow annotations */}
+          <div className="dag-arrows">
+            <div className="dag-arrow arrow-pm-rm">
+              <span className="dag-arrow-label">portfolio.updated</span>
+            </div>
+            <div className="dag-arrow arrow-rm-te">
+              <span className="dag-arrow-label">signal.approved</span>
+            </div>
+            <div className="dag-arrow arrow-ms-rm">
+              <span className="dag-arrow-label">signal.generated</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="dag-divider">
+          <span className="dag-divider-text">Independent Agents</span>
+        </div>
+
+        <div className="dag-row-group">
+          <div className="dag-row dag-row--independent">
+            {DAG_LAYOUT.row2.map((id, i) =>
+              id ? (
+                <DagNode
+                  key={id}
+                  agent={getAgentById(id)}
+                  agentId={id}
+                  lastLog={getLastLog(id)}
+                  selected={selectedAgent === id}
+                  pulsing={pulsingAgent === id}
+                  running={runningAgent === id}
+                  onClick={() => setSelectedAgent(selectedAgent === id ? null : id)}
+                  onRun={() => handleRunAgent(id)}
+                />
+              ) : (
+                <div key={`spacer-${i}`} className="dag-node-spacer" />
+              )
+            )}
+          </div>
         </div>
       </div>
 
