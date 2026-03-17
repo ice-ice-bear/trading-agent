@@ -22,6 +22,108 @@ function timeAgo(timestamp: string): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
+// --- AgentDetailPanel sub-component ---
+
+interface DetailPanelProps {
+  agent: Agent;
+  logs: AgentLog[];
+  events: AgentEvent[];
+  schedule: ScheduledTask | undefined;
+  onToggle: (enable: boolean) => void;
+  onRun: () => void;
+  running: boolean;
+}
+
+function AgentDetailPanel({ agent, logs, events, schedule, onToggle, onRun, running }: DetailPanelProps) {
+  const agentLogs = logs.filter((l) => l.agent_id === agent.id).slice(0, 5);
+  const agentEvents = events.filter((e) => e.agent_id === agent.id);
+
+  // Group events by type with count
+  const eventCounts: Record<string, number> = {};
+  for (const e of agentEvents) {
+    eventCounts[e.event_type] = (eventCounts[e.event_type] || 0) + 1;
+  }
+
+  const lastLog = agentLogs[0];
+
+  return (
+    <div className="detail-panel">
+      {/* Column 1: Summary */}
+      <div className="detail-col">
+        <div className="detail-agent-name">{agent.name}</div>
+        <div className="detail-agent-role">{agent.role}</div>
+        <div className={`detail-status-badge status-${agent.status}`}>{agent.status}</div>
+        {lastLog && (
+          <div className="detail-result-summary">{lastLog.result_summary}</div>
+        )}
+        <div className="detail-actions">
+          <button
+            className={`agent-toggle-btn ${agent.status === 'disabled' ? 'toggle-off' : 'toggle-on'}`}
+            onClick={() => onToggle(agent.status === 'disabled')}
+          >
+            {agent.status === 'disabled' ? 'OFF' : 'ON'}
+          </button>
+          <button
+            className="dag-node-run-btn"
+            onClick={onRun}
+            disabled={running || agent.status === 'disabled'}
+          >
+            {running ? '...' : 'Run'}
+          </button>
+        </div>
+      </div>
+
+      {/* Column 2: Recent Logs */}
+      <div className="detail-col">
+        <div className="detail-col-title">Recent Logs</div>
+        {agentLogs.length === 0 ? (
+          <div className="detail-empty">No logs yet</div>
+        ) : (
+          agentLogs.map((log) => (
+            <div key={log.id} className="detail-log-entry">
+              <span className={`dag-node-badge ${log.success !== 0 ? 'badge-ok' : 'badge-err'}`}>
+                {log.success !== 0 ? 'OK' : 'ERR'}
+              </span>
+              <span className="detail-log-action">{log.action}</span>
+              <span className="detail-log-duration">{(log.duration_ms / 1000).toFixed(1)}s</span>
+              <span className="detail-log-time">{timeAgo(log.timestamp)}</span>
+              {log.success === 0 && log.error_message && (
+                <div className="detail-log-error">{log.error_message}</div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Column 3: Events & Schedule */}
+      <div className="detail-col">
+        <div className="detail-col-title">Events Emitted</div>
+        {Object.keys(eventCounts).length === 0 ? (
+          <div className="detail-empty">No events</div>
+        ) : (
+          Object.entries(eventCounts).map(([type, count]) => (
+            <div key={type} className="detail-event-count">
+              <span className="detail-event-type">{type}</span>
+              <span className="detail-event-num">× {count}</span>
+            </div>
+          ))
+        )}
+        {schedule && (
+          <div className="detail-schedule">
+            <div className="detail-col-title" style={{ marginTop: 12 }}>Schedule</div>
+            <div className="detail-schedule-cron">
+              <code>{schedule.cron_expression}</code>
+              <span className={schedule.enabled !== 0 ? 'badge-ok' : 'badge-err'}>
+                {schedule.enabled !== 0 ? 'enabled' : 'disabled'}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function AgentWorkflow() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [logs, setLogs] = useState<AgentLog[]>([]);
@@ -35,10 +137,6 @@ export default function AgentWorkflow() {
   const { events: wsEvents } = useWebSocket();
   const lastWsEventCount = wsEvents.length;
 
-  // Suppress unused variable warnings for state used by future tasks
-  void agentEvents;
-  void tasks;
-  void selectedAgent;
 
   const fetchData = useCallback(async () => {
     try {
@@ -117,8 +215,6 @@ export default function AgentWorkflow() {
     }
   }, [fetchData]);
 
-  // Suppress unused variable warning for handleToggleAgent (used by future tasks)
-  void handleToggleAgent;
 
   const getAgentById = (id: string) => agents.find((a) => a.id === id);
   const getLastLog = (agentId: string) => logs.find((l) => l.agent_id === agentId);
@@ -184,7 +280,21 @@ export default function AgentWorkflow() {
         </div>
       </div>
 
-      {/* Section 2: Detail Panel — Task 3 */}
+      {/* Section 2: Detail Panel */}
+      <div className={`detail-panel-wrapper ${selectedAgent ? 'detail-panel--open' : ''}`}>
+        {selectedAgent && getAgentById(selectedAgent) && (
+          <AgentDetailPanel
+            agent={getAgentById(selectedAgent)!}
+            logs={logs}
+            events={agentEvents}
+            schedule={tasks.find((t) => t.agent_id === selectedAgent)}
+            onToggle={(enable) => handleToggleAgent(selectedAgent, enable)}
+            onRun={() => handleRunAgent(selectedAgent)}
+            running={runningAgent === selectedAgent}
+          />
+        )}
+      </div>
+
       {/* Section 3: Event Timeline — Task 4 */}
     </div>
   );
