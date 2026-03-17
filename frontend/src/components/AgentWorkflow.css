@@ -474,6 +474,9 @@
   gap: 8px;
   padding: 6px 0;
   border-bottom: 1px solid var(--border, #2a2a3e);
+}
+
+.timeline-entry--new {
   animation: slideIn 0.2s ease;
 }
 

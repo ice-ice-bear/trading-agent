@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import type { Agent, AgentLog, AgentEvent, ScheduledTask } from '../types';
 import { getAgents, getAgentLogs, getAgentEvents, getTasks, runAgent, enableAgent, disableAgent } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -92,7 +92,7 @@ function EventTimeline({ events, agents }: TimelineProps) {
     });
   };
 
-  const agentNameMap = new Map(agents.map((a) => [a.id, a.name]));
+  const agentNameMap = useMemo(() => new Map(agents.map((a) => [a.id, a.name])), [agents]);
 
   const filteredEvents = events.filter((evt) => {
     const cat = getCategoryForEvent(evt.event_type);
@@ -124,7 +124,7 @@ function EventTimeline({ events, agents }: TimelineProps) {
             const cat = getCategoryForEvent(evt.event_type);
             const color = cat ? EVENT_CATEGORIES[cat].color : '#6b7280';
             return (
-              <div key={`${evt.timestamp}-${evt.event_type}-${i}`} className="timeline-entry">
+              <div key={`${evt.timestamp}:${evt.event_type}:${evt.agent_id}`} className={`timeline-entry${i === 0 ? ' timeline-entry--new' : ''}`}>
                 <span className="timeline-dot" style={{ background: color }} />
                 <span className="timeline-type">{evt.event_type}</span>
                 <span className="timeline-agent">{agentNameMap.get(evt.agent_id) || evt.agent_id}</span>
