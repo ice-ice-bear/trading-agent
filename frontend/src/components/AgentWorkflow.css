@@ -132,14 +132,14 @@
 .dag-pipeline-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0;
-  width: 100%;
 }
 
 .dag-pipeline-row .dag-node {
   flex: 1;
   min-width: 0;
-  max-width: none;
+  max-width: 280px;
 }
 
 /* --- Inline connector between nodes --- */
@@ -168,14 +168,14 @@
 
 .dag-connector-label {
   position: absolute;
-  bottom: calc(100% + 4px);
+  top: calc(100% + 2px);
   left: 50%;
   transform: translateX(-50%);
   font-size: 9px;
   font-family: var(--font-mono);
-  color: var(--color-primary);
+  color: var(--color-text-secondary);
   white-space: nowrap;
-  opacity: 0.7;
+  opacity: 0.6;
   letter-spacing: -0.01em;
 }
 
@@ -183,12 +183,10 @@
 .dag-independent-row {
   display: flex;
   gap: var(--space-5);
-  width: 100%;
 }
 
 .dag-independent-row .dag-node {
-  flex: 1;
-  max-width: none;
+  flex: 0 1 280px;
 }
 
 .dag-node-spacer {
