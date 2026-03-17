@@ -1,4 +1,5 @@
 import type { PortfolioData } from '../../types';
+import { parseUTC } from '../../utils/time';
 
 interface Props {
   data: PortfolioData | null;
@@ -51,7 +52,7 @@ export default function PortfolioSummary({ data, loading }: Props) {
         </div>
       </div>
       {data?.timestamp && (
-        <div className="summary-timestamp">Updated: {new Date(data.timestamp + 'Z').toLocaleString('ko-KR')}</div>
+        <div className="summary-timestamp">Updated: {parseUTC(data.timestamp).toLocaleString('ko-KR')}</div>
       )}
     </div>
   );

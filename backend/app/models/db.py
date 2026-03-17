@@ -47,6 +47,55 @@ async def init_database() -> None:
             except Exception:
                 pass  # column already exists — safe to ignore
 
+        # --- Migrate signals CHECK constraints (add 'hold' direction, 'failed' status) ---
+        try:
+            row = await db.execute(
+                "SELECT sql FROM sqlite_master WHERE type='table' AND name='signals'"
+            )
+            schema_row = await row.fetchone()
+            if schema_row:
+                schema_sql = schema_row[0] or ""
+                if "'hold'" not in schema_sql or "'failed'" not in schema_sql:
+                    logger.info("Migrating signals table to add 'hold'/'failed' constraints...")
+                    await db.execute("ALTER TABLE signals RENAME TO signals_old")
+                    await db.executescript("""
+                        CREATE TABLE IF NOT EXISTS signals (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            timestamp TEXT NOT NULL DEFAULT (datetime('now')),
+                            agent_id TEXT NOT NULL,
+                            stock_code TEXT NOT NULL,
+                            stock_name TEXT NOT NULL DEFAULT '',
+                            direction TEXT NOT NULL CHECK(direction IN ('buy', 'sell', 'hold')),
+                            confidence REAL NOT NULL DEFAULT 0.0,
+                            reason TEXT,
+                            status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected', 'executed', 'failed')),
+                            risk_notes TEXT,
+                            scenarios_json TEXT,
+                            variant_view TEXT,
+                            rr_score REAL,
+                            current_price REAL,
+                            expert_stances_json TEXT,
+                            dart_fundamentals_json TEXT,
+                            metadata_json TEXT,
+                            critic_result TEXT,
+                            confidence_grades_json TEXT
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_signals_status ON signals(status);
+                    """)
+                    await db.execute("""
+                        INSERT INTO signals
+                        SELECT id, timestamp, agent_id, stock_code, stock_name,
+                               direction, confidence, reason, status, risk_notes,
+                               scenarios_json, variant_view, rr_score, current_price,
+                               expert_stances_json, dart_fundamentals_json,
+                               metadata_json, critic_result, confidence_grades_json
+                        FROM signals_old
+                    """)
+                    await db.execute("DROP TABLE signals_old")
+                    logger.info("Signals table migration complete.")
+        except Exception as e:
+            logger.warning(f"Signals CHECK migration skipped: {e}")
+
         # Seed default risk config
         for key, value in DEFAULT_RISK_CONFIG.items():
             await db.execute(

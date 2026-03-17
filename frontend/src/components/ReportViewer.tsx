@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import type { Report, ReportSummary } from '../types';
 import { getReports, getReport, generateReport, deleteReport } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
+import { parseUTC } from '../utils/time';
 
 type FilterType = 'all' | 'daily' | 'weekly';
 
@@ -140,7 +141,7 @@ export default function ReportViewer() {
                 </div>
                 <div className="report-list-item-title">{r.title || 'Untitled'}</div>
                 <div className="report-list-item-date">
-                  {new Date(r.timestamp).toLocaleDateString('ko-KR')}
+                  {parseUTC(r.timestamp).toLocaleDateString('ko-KR')}
                 </div>
               </div>
             ))
@@ -205,7 +206,7 @@ export default function ReportViewer() {
                         <td><span className={`side-badge ${t.side}`}>{t.side === 'buy' ? '매수' : '매도'}</span></td>
                         <td className="text-right">{t.quantity.toLocaleString()}</td>
                         <td className="text-right">{t.price.toLocaleString()}원</td>
-                        <td className="order-time">{new Date(t.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</td>
+                        <td className="order-time">{parseUTC(t.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -238,7 +239,7 @@ export default function ReportViewer() {
                   {summary.risk_events.map((r, i) => (
                     <div key={i} className={`risk-timeline-item ${r.event_type === 'stop_loss' ? 'risk-loss' : 'risk-profit'}`}>
                       <span className="risk-timeline-dot" />
-                      <span className="risk-timeline-time">{new Date(r.timestamp).toLocaleTimeString('ko-KR')}</span>
+                      <span className="risk-timeline-time">{parseUTC(r.timestamp).toLocaleTimeString('ko-KR')}</span>
                       <span className="risk-timeline-detail">{r.stock_name} — {r.detail}</span>
                     </div>
                   ))}

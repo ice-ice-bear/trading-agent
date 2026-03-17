@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import type { Order } from '../../types';
 import { getOrders } from '../../services/api';
+import { parseUTC } from '../../utils/time';
 
 interface Props {
   refreshTrigger?: number;
@@ -52,7 +53,7 @@ export default function OrderHistory({ refreshTrigger }: Props) {
           {orders.map((order) => (
             <tr key={order.id}>
               <td className="order-time">
-                {new Date(order.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                {parseUTC(order.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
               </td>
               <td>
                 <span className="stock-code">{order.stock_code}</span>

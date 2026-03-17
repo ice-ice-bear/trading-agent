@@ -1,6 +1,7 @@
 // frontend/src/components/dashboard/RiskAlertBanner.tsx
 import { useState, useEffect, useCallback } from 'react';
 import type { AgentEvent } from '../../types';
+import { parseUTC } from '../../utils/time';
 
 interface RiskAlert {
   id: string;
@@ -39,7 +40,7 @@ export default function RiskAlertBanner({ events }: Props) {
     if (alerts.length === 0) return;
     const interval = setInterval(() => {
       const cutoff = Date.now() - 30000;
-      setAlerts((prev) => prev.filter((a) => new Date(a.timestamp).getTime() > cutoff));
+      setAlerts((prev) => prev.filter((a) => parseUTC(a.timestamp).getTime() > cutoff));
     }, 5000);
     return () => clearInterval(interval);
   }, [alerts.length]);

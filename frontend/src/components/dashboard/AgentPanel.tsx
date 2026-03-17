@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Agent, AgentLog } from '../../types';
 import { getAgentLogs } from '../../services/api';
+import { parseUTC } from '../../utils/time';
 
 interface Props {
   agents: Agent[];
@@ -11,7 +12,7 @@ interface Props {
 }
 
 function timeAgo(timestamp: string): string {
-  const diff = Date.now() - new Date(timestamp).getTime();
+  const diff = Date.now() - parseUTC(timestamp).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'just now';
   if (mins < 60) return `${mins}m ago`;

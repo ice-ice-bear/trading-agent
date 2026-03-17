@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { parseUTC } from '../../utils/time';
 
 interface HistoryPoint {
   timestamp: string;
@@ -100,8 +101,8 @@ export default function PerformanceChart({ refreshTrigger }: Props) {
         </svg>
       </div>
       <div className="perf-range">
-        <span>{new Date(first.timestamp).toLocaleDateString('ko-KR')}</span>
-        <span>{new Date(latest.timestamp).toLocaleDateString('ko-KR')}</span>
+        <span>{parseUTC(first.timestamp).toLocaleDateString('ko-KR')}</span>
+        <span>{parseUTC(latest.timestamp).toLocaleDateString('ko-KR')}</span>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { AgentEvent } from '../../types';
 import { getAgentEvents } from '../../services/api';
+import { parseUTC } from '../../utils/time';
 
 interface Props {
   events: AgentEvent[];
@@ -53,7 +54,7 @@ export default function AlertFeed({ events: liveEvents }: Props) {
               <span className="event-type">{evt.event_type}</span>
               <span className="event-agent">{evt.agent_id}</span>
               <span className="event-time">
-                {new Date(evt.timestamp).toLocaleTimeString('ko-KR')}
+                {parseUTC(evt.timestamp).toLocaleTimeString('ko-KR')}
               </span>
             </div>
           ))}
