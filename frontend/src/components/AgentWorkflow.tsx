@@ -435,13 +435,13 @@ export default function AgentWorkflow() {
           <div className="dag-pipeline-row">
             <DagNode agent={getAgentById('portfolio_monitor')} agentId="portfolio_monitor" lastLog={getLastLog('portfolio_monitor')} selected={selectedAgent === 'portfolio_monitor'} pulsing={pulsingAgent === 'portfolio_monitor'} running={runningAgent === 'portfolio_monitor'} onClick={() => setSelectedAgent(selectedAgent === 'portfolio_monitor' ? null : 'portfolio_monitor')} onRun={() => handleRunAgent('portfolio_monitor')} />
             <div className="dag-connector">
-              <div className="dag-connector-line" />
-              <div className="dag-connector-arrow" />
+              <span className="dag-connector-label">portfolio.updated</span>
+              <div className="dag-connector-inner"><div className="dag-connector-line" /><div className="dag-connector-arrow" /></div>
             </div>
             <DagNode agent={getAgentById('risk_manager')} agentId="risk_manager" lastLog={getLastLog('risk_manager')} selected={selectedAgent === 'risk_manager'} pulsing={pulsingAgent === 'risk_manager'} running={runningAgent === 'risk_manager'} onClick={() => setSelectedAgent(selectedAgent === 'risk_manager' ? null : 'risk_manager')} onRun={() => handleRunAgent('risk_manager')} />
             <div className="dag-connector">
-              <div className="dag-connector-line" />
-              <div className="dag-connector-arrow" />
+              <span className="dag-connector-label">signal.approved</span>
+              <div className="dag-connector-inner"><div className="dag-connector-line" /><div className="dag-connector-arrow" /></div>
             </div>
             <DagNode agent={getAgentById('trading_executor')} agentId="trading_executor" lastLog={getLastLog('trading_executor')} selected={selectedAgent === 'trading_executor'} pulsing={pulsingAgent === 'trading_executor'} running={runningAgent === 'trading_executor'} onClick={() => setSelectedAgent(selectedAgent === 'trading_executor' ? null : 'trading_executor')} onRun={() => handleRunAgent('trading_executor')} />
           </div>
