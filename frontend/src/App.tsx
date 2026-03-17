@@ -2,9 +2,9 @@ import { useState, useCallback, useEffect } from 'react';
 import type { ChatMessage, Session, AppView } from './types';
 import { useTheme } from './hooks/useTheme';
 import { useSettings } from './hooks/useSettings';
-import Sidebar from './components/Sidebar';
+import IconRail from './components/IconRail';
 import HeaderBar from './components/HeaderBar';
-import ChatView from './components/ChatView';
+import ChatDrawer from './components/ChatDrawer';
 import SettingsView from './components/SettingsView';
 import DashboardView from './components/DashboardView';
 import ReportViewer from './components/ReportViewer';
@@ -48,25 +48,21 @@ function App() {
     () => loadFromStorage(STORAGE_KEYS.messages, {})
   );
 
-  // Persist to localStorage on change
+  // Persist to localStorage
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.sessions, JSON.stringify(sessions));
   }, [sessions]);
-
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.messages, JSON.stringify(allMessages));
   }, [allMessages]);
-
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.activeSession, JSON.stringify(activeSessionId));
   }, [activeSessionId]);
-
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.chatOpen, JSON.stringify(isChatOpen));
   }, [isChatOpen]);
 
   const activeMessages = allMessages[activeSessionId] ?? [];
-  const activeSession = sessions.find((s) => s.id === activeSessionId);
 
   const setActiveMessages = useCallback(
     (updater: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
@@ -112,12 +108,10 @@ function App() {
   const handleDeleteSession = useCallback((id: string) => {
     setSessions((prev) => {
       const filtered = prev.filter((s) => s.id !== id);
-      // If deleting the active session, switch to another
       if (id === activeSessionId) {
         if (filtered.length > 0) {
           setActiveSessionId(filtered[0].id);
         } else {
-          // No sessions left, create a new default
           const newId = crypto.randomUUID();
           filtered.push({ id: newId, title: '새 대화', messageCount: 0 });
           setActiveSessionId(newId);
@@ -125,7 +119,6 @@ function App() {
       }
       return filtered;
     });
-    // Clean up messages for deleted session
     setAllMessages((prev) => {
       const updated = { ...prev };
       delete updated[id];
@@ -133,60 +126,55 @@ function App() {
     });
   }, [activeSessionId]);
 
+  const handleChatToggle = useCallback(() => {
+    setIsChatOpen((prev) => !prev);
+  }, []);
+
   return (
     <div className="app-layout">
-      {currentView !== 'dashboard' && currentView !== 'reports' && currentView !== 'agents' && (
-        <>
-          <div
-            className={`sidebar-overlay ${isChatOpen ? 'visible' : ''}`}
-            onClick={() => setIsChatOpen(false)}
-          />
-          <Sidebar
-            sessions={sessions}
-            activeSessionId={activeSessionId}
-            onSelectSession={handleSelectSession}
-            onNewSession={handleNewSession}
-            onDeleteSession={handleDeleteSession}
-            onOpenSettings={() => setCurrentView('settings')}
-            onOpenDashboard={() => setCurrentView('dashboard')}
-            onOpenReports={() => setCurrentView('reports')}
-            onOpenAgents={() => setCurrentView('agents')}
-            currentView={currentView}
-            className={isChatOpen ? 'open' : 'collapsed'}
-          />
-        </>
-      )}
-      <main className="main-content">
+      <IconRail
+        currentView={currentView}
+        onViewChange={setCurrentView}
+        isChatOpen={isChatOpen}
+        onChatToggle={handleChatToggle}
+        onOpenSettings={() => setCurrentView('settings')}
+      />
+      <div className={`app-main ${isChatOpen ? 'chat-open' : ''}`}>
         <HeaderBar
-          sessionTitle={activeSession?.title ?? '새 대화'}
-          onToggleSidebar={() => setIsChatOpen((prev) => !prev)}
-          sidebarOpen={isChatOpen}
           theme={theme}
           onToggleTheme={toggleTheme}
           onOpenSettings={() => setCurrentView('settings')}
-          onOpenDashboard={() => setCurrentView('dashboard')}
-          onOpenChat={() => setIsChatOpen(true)}
-          onOpenReports={() => setCurrentView('reports')}
-          onOpenAgents={() => setCurrentView('agents')}
-          currentView={currentView}
           tradingMode={settings.trading_mode}
-          onNewChat={handleNewChat}
         />
-        {currentView === 'settings' ? (
-          <SettingsView
-            settings={settings}
-            onSave={saveSettings}
-            error={settingsError}
-            onBack={() => setCurrentView('dashboard')}
-          />
-        ) : currentView === 'dashboard' ? (
-          <DashboardView />
-        ) : currentView === 'reports' ? (
-          <ReportViewer />
-        ) : (
-          <AgentWorkflow />
-        )}
-      </main>
+        <div className="view-content">
+          {currentView === 'settings' ? (
+            <SettingsView
+              settings={settings}
+              onSave={saveSettings}
+              error={settingsError}
+              onBack={() => setCurrentView('dashboard')}
+            />
+          ) : currentView === 'dashboard' ? (
+            <DashboardView />
+          ) : currentView === 'reports' ? (
+            <ReportViewer />
+          ) : currentView === 'agents' ? (
+            <AgentWorkflow />
+          ) : null}
+        </div>
+      </div>
+      <ChatDrawer
+        isOpen={isChatOpen}
+        onClose={handleChatToggle}
+        sessions={sessions}
+        activeSessionId={activeSessionId}
+        onSelectSession={handleSelectSession}
+        onNewSession={handleNewChat}
+        onDeleteSession={handleDeleteSession}
+        messages={activeMessages}
+        setMessages={setActiveMessages}
+        onFirstMessage={handleFirstMessage}
+      />
     </div>
   );
 }

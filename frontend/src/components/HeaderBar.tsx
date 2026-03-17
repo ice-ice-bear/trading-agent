@@ -1,37 +1,18 @@
 import { useState, useEffect } from 'react';
 import { checkHealth } from '../services/api';
-import type { AppView } from '../types';
 
 interface Props {
-  sessionTitle: string;
-  onToggleSidebar: () => void;
-  sidebarOpen: boolean;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
   onOpenSettings: () => void;
-  onOpenDashboard: () => void;
-  onOpenChat: () => void;
-  onOpenReports: () => void;
-  onOpenAgents: () => void;
-  currentView: AppView;
   tradingMode: 'demo' | 'real';
-  onNewChat: () => void;
 }
 
 export default function HeaderBar({
-  sessionTitle,
-  onToggleSidebar,
-  sidebarOpen,
   theme,
   onToggleTheme,
   onOpenSettings,
-  onOpenDashboard,
-  onOpenChat,
-  onOpenReports,
-  onOpenAgents,
-  currentView,
   tradingMode,
-  onNewChat,
 }: Props) {
   const [health, setHealth] = useState<{
     status: string;
@@ -51,86 +32,8 @@ export default function HeaderBar({
 
   return (
     <header className="header-bar">
-      <button
-        className="sidebar-toggle-btn"
-        onClick={onToggleSidebar}
-        title={sidebarOpen ? '사이드바 닫기' : '사이드바 열기'}
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <line x1="3" y1="12" x2="21" y2="12" />
-          <line x1="3" y1="18" x2="21" y2="18" />
-        </svg>
-      </button>
-
-      <button
-        className="new-chat-header-btn"
-        onClick={onNewChat}
-        title="새 채팅"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 20h9" />
-          <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
-        </svg>
-      </button>
-
       <div className="header-title">
-        <button className="header-brand" onClick={onNewChat} title="새 채팅 시작">
-          KIS Trading
-        </button>
-        <span className="header-session-title">{sessionTitle}</span>
-      </div>
-
-      <div className="header-nav-tabs">
-        <button
-          className={`header-nav-tab ${currentView === 'chat' ? 'active' : ''}`}
-          onClick={onOpenChat}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-          </svg>
-          Chat
-        </button>
-        <button
-          className={`header-nav-tab ${currentView === 'dashboard' ? 'active' : ''}`}
-          onClick={onOpenDashboard}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="7" height="7" />
-            <rect x="14" y="3" width="7" height="7" />
-            <rect x="14" y="14" width="7" height="7" />
-            <rect x="3" y="14" width="7" height="7" />
-          </svg>
-          Dashboard
-        </button>
-        <button
-          className={`header-nav-tab ${currentView === 'agents' ? 'active' : ''}`}
-          onClick={onOpenAgents}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="5" cy="12" r="2" />
-            <circle cx="12" cy="6" r="2" />
-            <circle cx="12" cy="18" r="2" />
-            <circle cx="19" cy="12" r="2" />
-            <line x1="7" y1="12" x2="10" y2="7" />
-            <line x1="7" y1="12" x2="10" y2="17" />
-            <line x1="14" y1="7" x2="17" y2="11" />
-            <line x1="14" y1="17" x2="17" y2="13" />
-          </svg>
-          Agents
-        </button>
-        <button
-          className={`header-nav-tab ${currentView === 'reports' ? 'active' : ''}`}
-          onClick={onOpenReports}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="16" y1="13" x2="8" y2="13" />
-            <line x1="16" y1="17" x2="8" y2="17" />
-          </svg>
-          Reports
-        </button>
+        <span className="header-brand">KIS Trading</span>
       </div>
 
       <div className="header-right">
