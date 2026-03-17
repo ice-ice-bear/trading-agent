@@ -133,11 +133,13 @@
   display: flex;
   align-items: center;
   gap: 0;
+  width: 100%;
 }
 
 .dag-pipeline-row .dag-node {
   flex: 1;
   min-width: 0;
+  max-width: none;
 }
 
 /* --- Inline connector between nodes --- */
@@ -181,10 +183,12 @@
 .dag-independent-row {
   display: flex;
   gap: var(--space-5);
+  width: 100%;
 }
 
 .dag-independent-row .dag-node {
-  flex: 0 1 220px;
+  flex: 1;
+  max-width: none;
 }
 
 .dag-node-spacer {
