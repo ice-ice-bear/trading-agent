@@ -31,7 +31,7 @@ export default function RiskAlertBanner({ events }: Props) {
       timestamp: last.timestamp,
     };
 
-    setAlerts((prev) => [alert, ...prev].slice(0, 3));
+    queueMicrotask(() => setAlerts((prev) => [alert, ...prev].slice(0, 3)));
   }, [events]);
 
   // Auto-dismiss alerts older than 30s

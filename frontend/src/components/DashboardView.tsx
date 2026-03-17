@@ -10,7 +10,7 @@ import OrderHistory from './dashboard/OrderHistory';
 import SignalPanel from './dashboard/SignalPanel';
 import Watchlist from './dashboard/Watchlist';
 import PerformanceChart from './dashboard/PerformanceChart';
-import ReportList from './dashboard/ReportList';
+import RiskAlertBanner from './dashboard/RiskAlertBanner';
 
 export default function DashboardView() {
   const [portfolio, setPortfolio] = useState<PortfolioData | null>(null);
@@ -19,7 +19,13 @@ export default function DashboardView() {
   const [runningAgent, setRunningAgent] = useState<string | null>(null);
   const { connected: wsConnected, events } = useWebSocket();
 
-  const fetchData = useCallback(async () => {
+  // Targeted refresh counters
+  const [signalTrigger, setSignalTrigger] = useState(0);
+  const [orderTrigger, setOrderTrigger] = useState(0);
+  const [portfolioTrigger, setPortfolioTrigger] = useState(0);
+  const [agentTrigger, setAgentTrigger] = useState(0);
+
+  const fetchCoreData = useCallback(async () => {
     try {
       const [portfolioData, agentsData] = await Promise.all([
         getPortfolio(),
@@ -34,29 +40,43 @@ export default function DashboardView() {
     }
   }, []);
 
+  // Initial fetch + 60s fallback poll
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 30000);
+    fetchCoreData();
+    const interval = setInterval(fetchCoreData, 60000);
     return () => clearInterval(interval);
-  }, [fetchData]);
+  }, [fetchCoreData]);
 
-  // Refresh on relevant WebSocket events
+  // Targeted WS event handling
   useEffect(() => {
-    const lastEvent = events[events.length - 1];
-    if (
-      lastEvent?.event_type === 'portfolio.updated' ||
-      lastEvent?.event_type === 'order.filled' ||
-      lastEvent?.event_type === 'signal.approved'
-    ) {
-      fetchData();
+    const last = events[events.length - 1];
+    if (!last) return;
+
+    switch (last.event_type) {
+      case 'signal.generated':
+      case 'signal.approved':
+      case 'signal.rejected':
+        setSignalTrigger((n) => n + 1);
+        break;
+      case 'order.filled':
+      case 'order.submitted':
+        setOrderTrigger((n) => n + 1);
+        break;
+      case 'portfolio.updated':
+        setPortfolioTrigger((n) => n + 1);
+        fetchCoreData();
+        break;
+      // risk.* events are handled by RiskAlertBanner directly
     }
-  }, [events, fetchData]);
+    // Agent status may change on any event
+    setAgentTrigger((n) => n + 1);
+  }, [events, fetchCoreData]);
 
   const handleRunAgent = async (agentId: string) => {
     setRunningAgent(agentId);
     try {
       await runAgent(agentId);
-      await fetchData();
+      await fetchCoreData();
     } catch (err) {
       console.error('Failed to run agent:', err);
     } finally {
@@ -71,7 +91,7 @@ export default function DashboardView() {
       } else {
         await disableAgent(agentId);
       }
-      await fetchData();
+      await fetchCoreData();
     } catch (err) {
       console.error('Failed to toggle agent:', err);
     }
@@ -88,14 +108,15 @@ export default function DashboardView() {
         </div>
       </div>
 
+      <RiskAlertBanner events={events} />
+
       <div className="dashboard-grid">
         <div className="dashboard-main">
           <PortfolioSummary data={portfolio} loading={loading} />
           <PositionsTable positions={portfolio?.positions ?? []} />
-          <PerformanceChart />
-          <SignalPanel />
-          <OrderHistory />
-          <ReportList />
+          <PerformanceChart refreshTrigger={portfolioTrigger} />
+          <SignalPanel refreshTrigger={signalTrigger} />
+          <OrderHistory refreshTrigger={orderTrigger} />
         </div>
 
         <div className="dashboard-sidebar">
@@ -104,6 +125,7 @@ export default function DashboardView() {
             runningAgent={runningAgent}
             onRunAgent={handleRunAgent}
             onToggleAgent={handleToggleAgent}
+            refreshTrigger={agentTrigger}
           />
           <Watchlist />
           <AlertFeed events={events} />
