@@ -51,10 +51,10 @@ Refactor to a **dashboard-first layout** with:
 
 #### `AppLayout.tsx`
 - New layout orchestrator replacing the current inline layout in App.tsx
-- CSS Grid: `grid-template-columns: 56px 1fr [chat-drawer-width]`
-- When chat is closed: `grid-template-columns: 56px 1fr`
-- When chat is open: `grid-template-columns: 56px 1fr 380px`
-- Transition on `grid-template-columns` for smooth push/split animation
+- CSS Grid base: `grid-template-columns: 56px 1fr` (icon rail + main content)
+- Chat drawer is positioned absolutely/fixed on the right, not a grid column
+- When chat opens: main content gets `margin-right: var(--chat-drawer-width)` with CSS transition, drawer slides in via `transform: translateX(0)`
+- When chat closes: margin resets to 0, drawer slides out via `transform: translateX(100%)`
 
 ### Modified Components
 
