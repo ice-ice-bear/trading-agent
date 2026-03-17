@@ -23,6 +23,7 @@ def _enrich_signal(row: dict) -> dict:
         ("expert_stances_json", "expert_stances"),
         ("dart_fundamentals_json", "dart_fundamentals"),
         ("metadata_json", "metadata"),
+        ("confidence_grades_json", "confidence_grades"),
     ]:
         raw = result.pop(json_col, None)
         try:
