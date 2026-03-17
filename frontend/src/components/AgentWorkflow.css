@@ -163,8 +163,8 @@
 
 .dag-arrow {
   position: absolute;
-  background: var(--color-text-secondary);
-  opacity: 0.3;
+  background: var(--color-primary);
+  height: 2px;
 }
 
 /* Horizontal arrows: PortMon → Risk, Risk → Executor */
@@ -182,11 +182,10 @@
 .arrow-rm-te::after {
   content: '';
   position: absolute;
-  right: -4px;
-  top: -3px;
-  border: 4px solid transparent;
-  border-left: 6px solid var(--color-text-secondary);
-  opacity: 0.3;
+  right: -6px;
+  top: -4px;
+  border: 5px solid transparent;
+  border-left: 7px solid var(--color-primary);
 }
 
 /* Diagonal arrow: Scanner → Risk */
@@ -202,11 +201,10 @@
 .arrow-ms-rm::after {
   content: '';
   position: absolute;
-  right: -4px;
-  top: -3px;
-  border: 4px solid transparent;
-  border-left: 6px solid var(--color-text-secondary);
-  opacity: 0.3;
+  right: -6px;
+  top: -4px;
+  border: 5px solid transparent;
+  border-left: 7px solid var(--color-primary);
 }
 
 /* === Loading / Error states === */
