@@ -241,6 +241,66 @@ function AgentDetailPanel({ agent, logs, events, schedule, onToggle, onRun, runn
   );
 }
 
+// --- DagNode sub-component ---
+
+interface DagNodeProps {
+  agent: Agent | undefined;
+  agentId: string;
+  lastLog: AgentLog | undefined;
+  selected: boolean;
+  pulsing: boolean;
+  running: boolean;
+  onClick: () => void;
+  onRun: () => void;
+}
+
+function DagNode({ agent, agentId, lastLog, selected, pulsing, running, onClick, onRun }: DagNodeProps) {
+  if (!agent) {
+    return (
+      <div className="dag-node dag-node--unavailable">
+        <span className="dag-node-status status-disabled" />
+        <span className="dag-node-name">{agentId}</span>
+        <span className="dag-node-info">unavailable</span>
+      </div>
+    );
+  }
+
+  const status = running ? 'running' : agent.status;
+
+  return (
+    <div
+      className={`dag-node ${selected ? 'dag-node--selected' : ''} ${pulsing ? 'dag-node--pulse' : ''}`}
+      onClick={onClick}
+    >
+      <div className="dag-node-header">
+        <span className={`dag-node-status status-${status}`} />
+        <span className="dag-node-name">{agent.name}</span>
+      </div>
+      <div className="dag-node-body">
+        {lastLog ? (
+          <>
+            <span className={`dag-node-badge ${lastLog.success !== 0 ? 'badge-ok' : 'badge-err'}`}>
+              {lastLog.success !== 0 ? 'OK' : 'ERR'}
+            </span>
+            <span className="dag-node-info">
+              {timeAgo(lastLog.timestamp)} · {(lastLog.duration_ms / 1000).toFixed(1)}s
+            </span>
+          </>
+        ) : (
+          <span className="dag-node-info">no runs yet</span>
+        )}
+      </div>
+      <button
+        className="dag-node-run-btn"
+        onClick={(e) => { e.stopPropagation(); onRun(); }}
+        disabled={running || agent.status === 'disabled'}
+      >
+        {running ? '...' : 'Run'}
+      </button>
+    </div>
+  );
+}
+
 export default function AgentWorkflow() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [logs, setLogs] = useState<AgentLog[]>([]);
@@ -414,66 +474,6 @@ export default function AgentWorkflow() {
 
       {/* Section 3: Event Timeline */}
       <EventTimeline events={agentEvents} agents={agents} />
-    </div>
-  );
-}
-
-// --- DagNode sub-component ---
-
-interface DagNodeProps {
-  agent: Agent | undefined;
-  agentId: string;
-  lastLog: AgentLog | undefined;
-  selected: boolean;
-  pulsing: boolean;
-  running: boolean;
-  onClick: () => void;
-  onRun: () => void;
-}
-
-function DagNode({ agent, agentId, lastLog, selected, pulsing, running, onClick, onRun }: DagNodeProps) {
-  if (!agent) {
-    return (
-      <div className="dag-node dag-node--unavailable">
-        <span className="dag-node-status status-disabled" />
-        <span className="dag-node-name">{agentId}</span>
-        <span className="dag-node-info">unavailable</span>
-      </div>
-    );
-  }
-
-  const status = running ? 'running' : agent.status;
-
-  return (
-    <div
-      className={`dag-node ${selected ? 'dag-node--selected' : ''} ${pulsing ? 'dag-node--pulse' : ''}`}
-      onClick={onClick}
-    >
-      <div className="dag-node-header">
-        <span className={`dag-node-status status-${status}`} />
-        <span className="dag-node-name">{agent.name}</span>
-      </div>
-      <div className="dag-node-body">
-        {lastLog ? (
-          <>
-            <span className={`dag-node-badge ${lastLog.success !== 0 ? 'badge-ok' : 'badge-err'}`}>
-              {lastLog.success !== 0 ? 'OK' : 'ERR'}
-            </span>
-            <span className="dag-node-info">
-              {timeAgo(lastLog.timestamp)} · {(lastLog.duration_ms / 1000).toFixed(1)}s
-            </span>
-          </>
-        ) : (
-          <span className="dag-node-info">no runs yet</span>
-        )}
-      </div>
-      <button
-        className="dag-node-run-btn"
-        onClick={(e) => { e.stopPropagation(); onRun(); }}
-        disabled={running || agent.status === 'disabled'}
-      >
-        {running ? '...' : 'Run'}
-      </button>
     </div>
   );
 }
