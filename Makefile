@@ -58,21 +58,21 @@ start: stop
 	@echo "Starting all services..."
 	@echo ""
 	@cd "$(MCP_DIR)" && $(BG_RUN) env ENV_FILE="$(ENV_FILE)" uv run python server.py > "$(MCP_LOG)" 2>&1 &
-	@echo "  [1/3] MCP server starting on :3000..."
+	@echo "  [1/3] MCP server starting on :3001..."
 	@sleep 3
-	@cd "$(BACKEND_DIR)" && $(BG_RUN) env ENV_FILE="$(ENV_FILE)" uv run uvicorn app.main:app --reload --port 8000 > "$(BACKEND_LOG)" 2>&1 &
-	@echo "  [2/3] Backend starting on :8000..."
+	@cd "$(BACKEND_DIR)" && $(BG_RUN) env ENV_FILE="$(ENV_FILE)" uv run uvicorn app.main:app --reload --port 8001 > "$(BACKEND_LOG)" 2>&1 &
+	@echo "  [2/3] Backend starting on :8001..."
 	@sleep 2
-	@$(NVM_INIT) && cd "$(FRONTEND_DIR)" && $(BG_RUN) npx vite --host > "$(FRONTEND_LOG)" 2>&1 &
-	@echo "  [3/3] Frontend starting on :5173..."
+	@$(NVM_INIT) && cd "$(FRONTEND_DIR)" && $(BG_RUN) npx vite --host --port 5174 > "$(FRONTEND_LOG)" 2>&1 &
+	@echo "  [3/3] Frontend starting on :5174..."
 	@sleep 2
 	@echo ""
 	@echo "==================================="
 	@echo "  All services started!"
 	@echo ""
-	@echo "  MCP Server : http://localhost:3000"
-	@echo "  Backend    : http://localhost:8000"
-	@echo "  Frontend   : http://localhost:5173"
+	@echo "  MCP Server : http://localhost:3001"
+	@echo "  Backend    : http://localhost:8001"
+	@echo "  Frontend   : http://localhost:5174"
 	@echo "==================================="
 	@echo ""
 	@echo "  make stop   - stop all services"
@@ -85,41 +85,41 @@ mcp:
 	@echo "Starting MCP server..."
 	@cd "$(MCP_DIR)" && $(BG_RUN) env ENV_FILE="$(ENV_FILE)" uv run python server.py > "$(MCP_LOG)" 2>&1 &
 	@sleep 2
-	@echo "  MCP server running on :3000"
+	@echo "  MCP server running on :3001"
 
 backend:
 	@mkdir -p $(LOG_DIR)
 	@echo "Starting backend..."
-	@cd "$(BACKEND_DIR)" && $(BG_RUN) env ENV_FILE="$(ENV_FILE)" uv run uvicorn app.main:app --reload --port 8000 > "$(BACKEND_LOG)" 2>&1 &
+	@cd "$(BACKEND_DIR)" && $(BG_RUN) env ENV_FILE="$(ENV_FILE)" uv run uvicorn app.main:app --reload --port 8001 > "$(BACKEND_LOG)" 2>&1 &
 	@sleep 2
-	@echo "  Backend running on :8000"
+	@echo "  Backend running on :8001"
 
 frontend:
 	@mkdir -p $(LOG_DIR)
 	@echo "Starting frontend..."
-	@$(NVM_INIT) && cd "$(FRONTEND_DIR)" && $(BG_RUN) npx vite --host > "$(FRONTEND_LOG)" 2>&1 &
+	@$(NVM_INIT) && cd "$(FRONTEND_DIR)" && $(BG_RUN) npx vite --host --port 5174 > "$(FRONTEND_LOG)" 2>&1 &
 	@sleep 2
-	@echo "  Frontend running on :5173"
+	@echo "  Frontend running on :5174"
 
 # ===== Stop =====
 stop:
 	@echo "Stopping services..."
-	$(call kill_port,3000)
-	$(call kill_port,8000)
-	$(call kill_port,5173)
+	$(call kill_port,3001)
+	$(call kill_port,8001)
+	$(call kill_port,5174)
 	@echo "All services stopped."
 
 # ===== Health check =====
 health:
 	@echo "Checking health..."
-	@curl -s http://localhost:8000/health | python3 -m json.tool 2>/dev/null || echo "Backend not reachable"
+	@curl -s http://localhost:8001/health | python3 -m json.tool 2>/dev/null || echo "Backend not reachable"
 
 # ===== Status =====
 status:
 	@echo "Service status:"
-	@printf "  MCP Server (:3000) - "; lsof -ti :3000 >/dev/null 2>&1 && echo "RUNNING" || echo "STOPPED"
-	@printf "  Backend    (:8000) - "; lsof -ti :8000 >/dev/null 2>&1 && echo "RUNNING" || echo "STOPPED"
-	@printf "  Frontend   (:5173) - "; lsof -ti :5173 >/dev/null 2>&1 && echo "RUNNING" || echo "STOPPED"
+	@printf "  MCP Server (:3001) - "; lsof -ti :3001 >/dev/null 2>&1 && echo "RUNNING" || echo "STOPPED"
+	@printf "  Backend    (:8001) - "; lsof -ti :8001 >/dev/null 2>&1 && echo "RUNNING" || echo "STOPPED"
+	@printf "  Frontend   (:5174) - "; lsof -ti :5174 >/dev/null 2>&1 && echo "RUNNING" || echo "STOPPED"
 
 # ===== Logs =====
 logs-mcp:

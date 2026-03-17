@@ -9,11 +9,11 @@ LLM-based stock trading assistant using Korea Investment & Securities (KIS) Open
 ## Architecture
 
 ```
-React (Vite, :5173)  →  FastAPI (:8000)  →  Claude API
+React (Vite, :5174)  →  FastAPI (:8001)  →  Claude API
                               ↕
                      MCP Client (fastmcp)
                               ↕
-                  KIS Trading MCP Server (SSE, :3000)
+                  KIS Trading MCP Server (SSE, :3001)
                               ↕
                       KIS OpenAPI (paper trading)
 ```
@@ -38,9 +38,9 @@ make clean            # Stop + remove dist, .vite cache, .logs, MCP tmp files
 
 Individual services:
 ```bash
-make mcp              # MCP server only (:3000)
-make backend          # Backend only (:8000)
-make frontend         # Frontend only (:5173)
+make mcp              # MCP server only (:3001)
+make backend          # Backend only (:8001)
+make frontend         # Frontend only (:5174)
 ```
 
 Direct commands (for development/debugging):
@@ -83,7 +83,7 @@ All services read from a single `.env` file at project root (passed via `ENV_FIL
 
 Required: `ANTHROPIC_API_KEY`, `KIS_PAPER_APP_KEY`, `KIS_PAPER_APP_SECRET`, `KIS_PAPER_STOCK`
 
-Frontend dev server proxies `/api` and `/health` to `localhost:8000` (configured in `frontend/vite.config.ts`).
+Frontend dev server proxies `/api` and `/health` to `localhost:8001` (configured in `frontend/vite.config.ts`).
 
 ## Tech Stack
 
