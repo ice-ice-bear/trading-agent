@@ -1,11 +1,14 @@
 """In-process async event bus for agent communication."""
 
 import asyncio
+import json
 import logging
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Coroutine
+
+from app.models.db import execute_insert
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +59,9 @@ class EventBus:
         async with self._lock:
             self._history.append(event)
 
+        # Fire-and-forget DB persistence
+        asyncio.create_task(self._persist_event(event))
+
         logger.info(
             f"Event: {event.event_type} from {event.agent_id} | "
             f"data keys: {list(event.data.keys())}"
@@ -78,6 +84,21 @@ class EventBus:
                 await listener(event)
             except Exception as e:
                 logger.error(f"Global listener error: {e}", exc_info=True)
+
+    async def _persist_event(self, event: AgentEvent) -> None:
+        """Persist event to DB. Errors are suppressed to avoid blocking event delivery."""
+        try:
+            await execute_insert(
+                "INSERT INTO agent_events (event_type, agent_id, data, timestamp) VALUES (?, ?, ?, ?)",
+                (
+                    event.event_type,
+                    event.agent_id,
+                    json.dumps(event.data) if event.data else "{}",
+                    event.timestamp,
+                ),
+            )
+        except Exception as e:
+            logger.warning(f"Failed to persist event {event.event_type}: {e}")
 
     def get_history(self, limit: int = 100, event_type: str | None = None) -> list[dict]:
         """Return recent events as dicts, optionally filtered by type."""
