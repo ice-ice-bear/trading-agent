@@ -9,6 +9,7 @@ interface Props {
   onOpenSettings: () => void;
   onOpenDashboard: () => void;
   onOpenReports: () => void;
+  onOpenAgents: () => void;
   currentView: AppView;
   className?: string;
 }
@@ -22,6 +23,7 @@ export default function Sidebar({
   onOpenSettings,
   onOpenDashboard,
   onOpenReports,
+  onOpenAgents,
   currentView,
   className,
 }: Props) {
@@ -89,6 +91,22 @@ export default function Sidebar({
             <rect x="3" y="14" width="7" height="7" />
           </svg>
           <span>대시보드</span>
+        </button>
+        <button
+          className={`sidebar-nav-link ${currentView === 'agents' ? 'active' : ''}`}
+          onClick={onOpenAgents}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="5" cy="12" r="2" />
+            <circle cx="12" cy="6" r="2" />
+            <circle cx="12" cy="18" r="2" />
+            <circle cx="19" cy="12" r="2" />
+            <line x1="7" y1="12" x2="10" y2="7" />
+            <line x1="7" y1="12" x2="10" y2="17" />
+            <line x1="14" y1="7" x2="17" y2="11" />
+            <line x1="14" y1="17" x2="17" y2="13" />
+          </svg>
+          <span>에이전트</span>
         </button>
         <button
           className={`sidebar-nav-link ${currentView === 'reports' ? 'active' : ''}`}

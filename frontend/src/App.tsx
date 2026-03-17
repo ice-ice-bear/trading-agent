@@ -8,6 +8,7 @@ import ChatView from './components/ChatView';
 import SettingsView from './components/SettingsView';
 import DashboardView from './components/DashboardView';
 import ReportViewer from './components/ReportViewer';
+import AgentWorkflow from './components/AgentWorkflow';
 import './App.css';
 
 const STORAGE_KEYS = {
@@ -130,7 +131,7 @@ function App() {
 
   return (
     <div className="app-layout">
-      {currentView !== 'dashboard' && currentView !== 'reports' && (
+      {currentView !== 'dashboard' && currentView !== 'reports' && currentView !== 'agents' && (
         <>
           <div
             className={`sidebar-overlay ${sidebarOpen ? 'visible' : ''}`}
@@ -145,6 +146,7 @@ function App() {
             onOpenSettings={() => setCurrentView('settings')}
             onOpenDashboard={() => setCurrentView('dashboard')}
             onOpenReports={() => setCurrentView('reports')}
+            onOpenAgents={() => setCurrentView('agents')}
             currentView={currentView}
             className={sidebarOpen ? 'open' : 'collapsed'}
           />
@@ -161,6 +163,7 @@ function App() {
           onOpenDashboard={() => setCurrentView('dashboard')}
           onOpenChat={() => setCurrentView('chat')}
           onOpenReports={() => setCurrentView('reports')}
+          onOpenAgents={() => setCurrentView('agents')}
           currentView={currentView}
           tradingMode={settings.trading_mode}
           onNewChat={handleNewChat}
@@ -176,6 +179,8 @@ function App() {
           <DashboardView />
         ) : currentView === 'reports' ? (
           <ReportViewer />
+        ) : currentView === 'agents' ? (
+          <AgentWorkflow />
         ) : (
           <ChatView
             sessionId={activeSessionId}
