@@ -166,8 +166,50 @@ export interface Report {
   period_end: string;
   title: string;
   content?: string;
-  summary_json?: string;
+  summary?: ReportSummary | null;
   agent_id: string;
 }
 
-export type AppView = 'chat' | 'settings' | 'dashboard';
+export type AppView = 'chat' | 'settings' | 'dashboard' | 'reports';
+
+// --- Report Summary types ---
+
+export interface ReportKPIs {
+  total_pnl: number;
+  total_pnl_pct: number;
+  trade_count: number;
+  win_rate: number;
+  max_drawdown_pct: number;
+  signal_count: number;
+  signal_approval_rate: number;
+}
+
+export interface ReportTrade {
+  stock_name: string;
+  side: 'buy' | 'sell';
+  quantity: number;
+  price: number;
+  pnl?: number | null;
+  timestamp: string;
+}
+
+export interface ReportSignalSummary {
+  stock_name: string;
+  direction: string;
+  rr_score?: number | null;
+  status: string;
+}
+
+export interface ReportRiskEvent {
+  event_type: string;
+  stock_name: string;
+  detail: string;
+  timestamp: string;
+}
+
+export interface ReportSummary {
+  kpis: ReportKPIs;
+  trades: ReportTrade[];
+  signals: ReportSignalSummary[];
+  risk_events: ReportRiskEvent[];
+}
