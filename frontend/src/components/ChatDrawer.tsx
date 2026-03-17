@@ -58,7 +58,11 @@ export default function ChatDrawer({
   }, [onClose]);
 
   return (
-    <aside className={`chat-drawer ${isOpen ? 'open' : ''}`}>
+    <>
+      {isOpen && (
+        <div className="chat-drawer-backdrop" onClick={onClose} />
+      )}
+      <aside className={`chat-drawer ${isOpen ? 'open' : ''}`} aria-label="채팅">
       <div className="chat-drawer-header">
         <div className="chat-drawer-session" ref={dropdownRef}>
           <button
@@ -131,5 +135,6 @@ export default function ChatDrawer({
         />
       </div>
     </aside>
+    </>
   );
 }

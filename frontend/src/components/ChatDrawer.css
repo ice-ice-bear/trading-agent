@@ -193,6 +193,21 @@
   height: 100%;
 }
 
+/* Backdrop for overlay mode (tablet/mobile) */
+.chat-drawer-backdrop {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .chat-drawer-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 89;
+  }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .chat-drawer {

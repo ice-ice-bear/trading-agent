@@ -72,22 +72,8 @@
   font-weight: 700;
   font-family: var(--font-sans);
   color: var(--color-text);
-  cursor: pointer;
   padding: 0;
   flex-shrink: 0;
-  transition: opacity var(--transition-fast);
-}
-
-.header-brand:hover {
-  opacity: 0.7;
-}
-
-.header-session-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--color-text-secondary);
-  font-weight: 400;
 }
 
 
