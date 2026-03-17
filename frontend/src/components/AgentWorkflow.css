@@ -128,19 +128,63 @@
   opacity: 0.7;
 }
 
-.dag-row {
+/* --- Pipeline row: nodes interleaved with connectors --- */
+.dag-pipeline-row {
   display: flex;
-  justify-content: space-around;
   align-items: center;
-  gap: var(--space-5);
-  position: relative;
-  z-index: 1;
+  gap: 0;
 }
 
-.dag-row--independent {
-  justify-content: flex-start;
-  padding-left: var(--space-3);
-  gap: var(--space-6);
+.dag-pipeline-row .dag-node {
+  flex: 1;
+  min-width: 0;
+}
+
+/* --- Inline connector between nodes --- */
+.dag-connector {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 70px;
+  flex-shrink: 0;
+  margin: 0 var(--space-1);
+}
+
+.dag-connector-line {
+  flex: 1;
+  height: 2px;
+  background: var(--color-primary);
+}
+
+.dag-connector-arrow {
+  width: 0;
+  height: 0;
+  border: 5px solid transparent;
+  border-left: 7px solid var(--color-primary);
+  flex-shrink: 0;
+}
+
+.dag-connector-label {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-family: var(--font-mono);
+  color: var(--color-primary);
+  white-space: nowrap;
+  opacity: 0.7;
+  letter-spacing: -0.01em;
+}
+
+/* --- Independent agents row --- */
+.dag-independent-row {
+  display: flex;
+  gap: var(--space-5);
+}
+
+.dag-independent-row .dag-node {
+  flex: 0 1 220px;
 }
 
 .dag-node-spacer {
@@ -371,63 +415,7 @@
   cursor: not-allowed;
 }
 
-/* === DAG Arrows === */
-.dag-arrows {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  padding: 0 var(--space-5);
-  margin-top: calc(-1 * var(--space-2));
-  pointer-events: none;
-  position: relative;
-  height: 28px;
-}
-
-.dag-arrow {
-  position: relative;
-  display: flex;
-  align-items: center;
-  flex: 1;
-  max-width: 220px;
-  justify-content: center;
-}
-
-/* The arrow line */
-.dag-arrow::before {
-  content: '';
-  display: block;
-  height: 2px;
-  width: 40px;
-  background: var(--color-primary);
-}
-
-/* The arrowhead */
-.dag-arrow::after {
-  content: '';
-  display: block;
-  border: 5px solid transparent;
-  border-left: 7px solid var(--color-primary);
-  flex-shrink: 0;
-}
-
-/* Arrow label */
-.dag-arrow-label {
-  position: absolute;
-  top: -12px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 9px;
-  font-family: var(--font-mono);
-  color: var(--color-primary);
-  white-space: nowrap;
-  opacity: 0.7;
-  letter-spacing: -0.02em;
-}
-
-/* Diagonal arrow — hide for now, show via label on the divider instead */
-.arrow-ms-rm {
-  display: none;
-}
+/* (Arrows are now inline connectors — see .dag-connector above) */
 
 /* ============================================================
    Loading / Error States
@@ -875,11 +863,11 @@
   }
   .timeline-type { min-width: auto; }
   .timeline-agent { min-width: auto; }
-  .dag-row { flex-wrap: wrap; }
-  .dag-row--independent { padding-left: 0; }
-  .dag-node { max-width: none; min-width: 140px; }
+  .dag-pipeline-row { flex-wrap: wrap; gap: var(--space-3); }
+  .dag-pipeline-row .dag-node { flex: 1 1 140px; min-width: 140px; }
+  .dag-connector { display: none; }
+  .dag-independent-row { flex-wrap: wrap; }
+  .dag-independent-row .dag-node { flex: 1 1 140px; min-width: 140px; }
   .dag-row-group { padding: var(--space-3) var(--space-4); }
   .dag-header { flex-direction: column; gap: var(--space-2); align-items: flex-start; }
-  .dag-arrows { display: none; }
-  .dag-arrow-label { display: none; }
 }
