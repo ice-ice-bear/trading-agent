@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from app.agents.engine import agent_engine
 from app.agents.base import AgentContext, AgentStatus
-from app.agents.event_bus import event_bus
+from app.agents.event_bus import AgentEvent, event_bus
 from app.models.db import execute_insert, execute_query
 from app.services import portfolio_service
 
@@ -172,4 +172,62 @@ async def run_agent(agent_id: str):
         "summary": result.summary,
         "events_emitted": result.events_emitted,
         "error": result.error,
+    }
+
+
+class TestSignalRequest(BaseModel):
+    stock_code: str = "005930"  # 삼성전자
+    stock_name: str = "삼성전자"
+    direction: str = "buy"  # buy | sell
+    confidence: float = 0.8
+    reason: str = "통합 테스트용 신호"
+
+
+@router.post("/test/inject-signal")
+async def inject_test_signal(body: TestSignalRequest):
+    """테스트용 signal.generated 이벤트를 직접 주입합니다.
+
+    risk_manager → trading_executor 연계를 검증하는 데 사용합니다.
+    paper trading 환경에서 실제 주문이 실행될 수 있습니다.
+    """
+    if body.direction not in ("buy", "sell"):
+        raise HTTPException(400, "direction must be 'buy' or 'sell'")
+    if not 0.0 <= body.confidence <= 1.0:
+        raise HTTPException(400, "confidence must be between 0.0 and 1.0")
+
+    # DB에 pending 신호 저장 (risk_manager가 status 업데이트)
+    signal_id = await execute_insert(
+        """INSERT INTO signals
+           (agent_id, stock_code, stock_name, direction, confidence, reason, status)
+           VALUES (?, ?, ?, ?, ?, ?, 'pending')""",
+        (
+            "test",
+            body.stock_code,
+            body.stock_name,
+            body.direction,
+            body.confidence,
+            body.reason,
+        ),
+    )
+
+    event = AgentEvent(
+        event_type="signal.generated",
+        agent_id="test",
+        data={
+            "signal_id": signal_id,
+            "stock_code": body.stock_code,
+            "stock_name": body.stock_name,
+            "direction": body.direction,
+            "confidence": body.confidence,
+            "reason": body.reason,
+        },
+    )
+    await event_bus.publish(event)
+
+    return {
+        "injected": True,
+        "signal_id": signal_id,
+        "event_type": "signal.generated",
+        "data": event.data,
+        "note": "이벤트 추적: GET /api/agents/events",
     }
