@@ -1,10 +1,23 @@
 """Reports API — list, view, and generate performance reports."""
 
+import json
+
 from fastapi import APIRouter, HTTPException, Query
 
 from app.models.db import execute_query
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
+
+
+def _enrich_report(row: dict) -> dict:
+    """Parse summary_json string into a dict for the frontend."""
+    result = dict(row)
+    raw = result.pop("summary_json", None)
+    try:
+        result["summary"] = json.loads(raw) if raw else None
+    except (json.JSONDecodeError, TypeError):
+        result["summary"] = None
+    return result
 
 
 @router.get("")
@@ -28,7 +41,8 @@ async def list_reports(
                FROM reports ORDER BY timestamp DESC LIMIT ?""",
             (limit,),
         )
-    return {"reports": rows or []}
+    reports = [_enrich_report(dict(row)) for row in (rows or [])]
+    return {"reports": reports}
 
 
 @router.get("/{report_id}")
@@ -37,7 +51,7 @@ async def get_report(report_id: int):
     rows = await execute_query("SELECT * FROM reports WHERE id = ?", (report_id,))
     if not rows:
         raise HTTPException(status_code=404, detail="Report not found")
-    return rows[0]
+    return _enrich_report(dict(rows[0]))
 
 
 @router.post("/generate")
