@@ -39,6 +39,7 @@ async def init_database() -> None:
             "ALTER TABLE signals ADD COLUMN dart_fundamentals_json TEXT",
             "ALTER TABLE signals ADD COLUMN metadata_json TEXT",
             "ALTER TABLE signals ADD COLUMN critic_result TEXT",
+            "ALTER TABLE signals ADD COLUMN confidence_grades_json TEXT",
         ]
         for stmt in _ALTER_STATEMENTS:
             try:

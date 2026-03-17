@@ -60,7 +60,8 @@ CREATE TABLE IF NOT EXISTS signals (
     expert_stances_json TEXT,
     dart_fundamentals_json TEXT,
     metadata_json TEXT,
-    critic_result TEXT
+    critic_result TEXT,
+    confidence_grades_json TEXT
 );
 
 CREATE TABLE IF NOT EXISTS agent_logs (
@@ -146,6 +147,16 @@ CREATE TABLE IF NOT EXISTS dart_financials_cache (
     financials_json TEXT NOT NULL,
     PRIMARY KEY (stock_code, cache_date)
 );
+
+CREATE TABLE IF NOT EXISTS agent_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_type TEXT NOT NULL,
+    agent_id TEXT,
+    data TEXT,
+    timestamp TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_events_timestamp ON agent_events(timestamp);
 """
 
 # Default risk configuration values
