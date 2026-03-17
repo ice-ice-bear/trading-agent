@@ -22,6 +22,123 @@ function timeAgo(timestamp: string): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
+// --- Event category definitions ---
+
+type EventCategory = 'signal' | 'order' | 'portfolio' | 'risk' | 'report';
+
+const EVENT_CATEGORIES: Record<EventCategory, { types: string[]; color: string; label: string }> = {
+  signal: { types: ['signal.generated', 'signal.approved', 'signal.rejected', 'signal.failed'], color: '#22c55e', label: 'Signal' },
+  order: { types: ['order.filled', 'order.failed'], color: '#3b82f6', label: 'Order' },
+  portfolio: { types: ['portfolio.updated'], color: '#6b7280', label: 'Portfolio' },
+  risk: { types: ['risk.stop_loss', 'risk.take_profit'], color: '#ef4444', label: 'Risk' },
+  report: { types: ['report.generated'], color: '#a855f7', label: 'Report' },
+};
+
+function getCategoryForEvent(eventType: string): EventCategory | null {
+  for (const [cat, def] of Object.entries(EVENT_CATEGORIES)) {
+    if (def.types.includes(eventType)) return cat as EventCategory;
+  }
+  return null;
+}
+
+function getEventSummary(evt: AgentEvent): string {
+  const d = evt.data || {};
+  switch (evt.event_type) {
+    case 'signal.generated':
+      return `${d.stock_name || d.stock_code || '?'} ${d.direction || ''} (R/R: ${d.rr_score ?? '?'})`;
+    case 'signal.approved':
+      return `${d.stock_name || d.stock_code || '?'} approved`;
+    case 'signal.rejected':
+      return `${d.stock_name || d.stock_code || '?'} rejected — ${d.reason || '?'}`;
+    case 'signal.failed': {
+      const fields = Array.isArray(d.failed_fields) ? (d.failed_fields as string[]).join(', ') : '';
+      return `${d.stock_name || d.stock_code || '?'} — confidence gate${fields ? ` (${fields})` : ''}`;
+    }
+    case 'order.filled':
+      return `${d.side || '?'} ${d.quantity ?? '?'}× ${d.stock_name || d.stock_code || '?'}`;
+    case 'order.failed':
+      return `${d.stock_name || d.stock_code || '?'} — ${d.reason || 'failed'}`;
+    case 'portfolio.updated':
+      return `총자산 ${Number(d.total_value || 0).toLocaleString()} · P/L ${d.total_pnl_pct ?? 0}%`;
+    case 'risk.stop_loss':
+      return `STOP ${d.stock_name || '?'} (${d.pnl_pct ?? '?'}%)`;
+    case 'risk.take_profit':
+      return `TAKE ${d.stock_name || '?'} (${d.pnl_pct ?? '?'}%)`;
+    case 'report.generated':
+      return `${d.report_type || ''} report`;
+    default:
+      return evt.event_type;
+  }
+}
+
+// --- EventTimeline sub-component ---
+
+interface TimelineProps {
+  events: AgentEvent[];
+  agents: Agent[];
+}
+
+function EventTimeline({ events, agents }: TimelineProps) {
+  const [activeFilters, setActiveFilters] = useState<Set<EventCategory>>(
+    new Set(Object.keys(EVENT_CATEGORIES) as EventCategory[])
+  );
+
+  const toggleFilter = (cat: EventCategory) => {
+    setActiveFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+  };
+
+  const agentNameMap = new Map(agents.map((a) => [a.id, a.name]));
+
+  const filteredEvents = events.filter((evt) => {
+    const cat = getCategoryForEvent(evt.event_type);
+    return cat && activeFilters.has(cat);
+  });
+
+  return (
+    <div className="timeline-container">
+      <div className="timeline-header">
+        <h3 className="card-title">Event Timeline</h3>
+        <div className="timeline-filters">
+          {(Object.entries(EVENT_CATEGORIES) as [EventCategory, typeof EVENT_CATEGORIES[EventCategory]][]).map(([cat, def]) => (
+            <button
+              key={cat}
+              className={`timeline-filter-pill ${activeFilters.has(cat) ? 'pill-active' : ''}`}
+              style={{ '--pill-color': def.color } as React.CSSProperties}
+              onClick={() => toggleFilter(cat)}
+            >
+              {def.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="timeline-list">
+        {filteredEvents.length === 0 ? (
+          <div className="detail-empty">No events match filters</div>
+        ) : (
+          filteredEvents.map((evt, i) => {
+            const cat = getCategoryForEvent(evt.event_type);
+            const color = cat ? EVENT_CATEGORIES[cat].color : '#6b7280';
+            return (
+              <div key={`${evt.timestamp}-${evt.event_type}-${i}`} className="timeline-entry">
+                <span className="timeline-dot" style={{ background: color }} />
+                <span className="timeline-type">{evt.event_type}</span>
+                <span className="timeline-agent">{agentNameMap.get(evt.agent_id) || evt.agent_id}</span>
+                <span className="timeline-summary">{getEventSummary(evt)}</span>
+                <span className="timeline-time">{parseUTC(evt.timestamp).toLocaleTimeString('ko-KR')}</span>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
 // --- AgentDetailPanel sub-component ---
 
 interface DetailPanelProps {
@@ -295,7 +412,8 @@ export default function AgentWorkflow() {
         )}
       </div>
 
-      {/* Section 3: Event Timeline — Task 4 */}
+      {/* Section 3: Event Timeline */}
+      <EventTimeline events={agentEvents} agents={agents} />
     </div>
   );
 }
