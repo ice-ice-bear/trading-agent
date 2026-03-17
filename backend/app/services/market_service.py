@@ -63,7 +63,10 @@ async def get_fluctuation_rank(count: int = 20) -> list[dict]:
 
 
 async def get_stock_price(stock_code: str) -> dict[str, Any]:
-    """Fetch current price for a stock."""
+    """Fetch current price for a stock.
+
+    KIS inquire_price 응답은 list[dict] 형태로 오므로 첫 번째 요소를 반환한다.
+    """
     raw = await mcp_manager.call_tool(
         "domestic_stock",
         {
@@ -77,12 +80,13 @@ async def get_stock_price(stock_code: str) -> dict[str, Any]:
     )
     try:
         data = _unwrap_mcp_response(raw)
+        if isinstance(data, list) and data:
+            return data[0]  # DataFrame 첫 행
         if isinstance(data, dict):
-            output = data.get("output", data)
-            return output
-        return {"raw": raw}
+            return data.get("output", data)
+        return {}
     except (json.JSONDecodeError, TypeError):
-        return {"raw": str(raw)[:500]}
+        return {}
 
 
 async def get_daily_chart(stock_code: str, period: str = "D") -> list[dict]:

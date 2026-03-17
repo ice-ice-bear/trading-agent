@@ -11,11 +11,34 @@ logger = logging.getLogger(__name__)
 
 
 async def check_buyable(stock_code: str, price: int = 0) -> dict[str, Any]:
-    """Check how many shares can be bought (매수 가능 조회)."""
+    """Check how many shares can be bought (매수 가능 조회).
+
+    KIS api_code.py가 ord_unpr=0 또는 "" 모두 ValueError를 발생시키므로
+    price가 없으면 inquire_price로 현재가를 먼저 조회해 전달한다.
+    """
+    from app.services.market_service import get_stock_price  # 순환 import 방지
+
+    if not price:
+        try:
+            price_data = await get_stock_price(stock_code)
+            price = int(
+                price_data.get("stck_prpr") or      # 주식현재가
+                price_data.get("stck_clpr") or      # 주식종가
+                price_data.get("output", {}).get("stck_prpr") or
+                0
+            )
+            logger.info(f"check_buyable: got current price for {stock_code} = {price}")
+        except Exception as e:
+            logger.warning(f"check_buyable: failed to get price for {stock_code}: {e}")
+
+    if not price:
+        logger.warning(f"check_buyable({stock_code}): no price available, returning empty")
+        return {"nrcvb_buy_qty": "0", "max_buy_qty": "0", "ord_psbl_cash": "0"}
+
     params: dict[str, Any] = {
         "env_dv": "demo",
         "pdno": stock_code,
-        "ord_unpr": str(price) if price else "0",
+        "ord_unpr": str(price),
         "ord_dvsn": "01",
         "cma_evlu_amt_icld_yn": "Y",
         "ovrs_icld_yn": "N",
@@ -24,7 +47,30 @@ async def check_buyable(stock_code: str, price: int = 0) -> dict[str, Any]:
         "domestic_stock",
         {"api_type": "inquire_psbl_order", "params": params},
     )
-    return _parse_dict(raw)
+
+    # MCP 응답: {"ok": true, "data": {MCP metadata dict with "error" key}}
+    # 실제 KIS 응답은 error가 없을 때 별도 data 필드에 있음
+    raw_parsed = json.loads(raw) if isinstance(raw, str) else raw
+    mcp_inner = raw_parsed.get("data", raw_parsed) if isinstance(raw_parsed, dict) else raw_parsed
+
+    # MCP 툴 자체 에러 확인
+    if isinstance(mcp_inner, dict) and mcp_inner.get("error"):
+        logger.warning(f"check_buyable MCP error: {str(mcp_inner['error'])[:200]}")
+        return {"nrcvb_buy_qty": "0", "max_buy_qty": "0", "ord_psbl_cash": "0"}
+
+    # 실제 KIS 응답 추출 (이중 래핑)
+    result = _unwrap_mcp_response(raw_parsed)
+    if isinstance(result, list) and result:
+        result = result[0]
+    if not isinstance(result, dict):
+        result = {}
+
+    logger.info(
+        f"check_buyable({stock_code}@{price}): "
+        f"nrcvb={result.get('nrcvb_buy_qty')}, max={result.get('max_buy_qty')}, "
+        f"cash={result.get('ord_psbl_cash')}"
+    )
+    return result
 
 
 async def check_sellable(stock_code: str) -> dict[str, Any]:

@@ -61,9 +61,20 @@ class TradingExecutorAgent(BaseAgent):
         """Execute a buy order."""
         try:
             # Check how many shares we can buy
+            # KIS 응답: flat dict (list[dict] 첫 행) — output 중첩 없음
             buyable = await check_buyable(stock_code)
-            max_qty = int(buyable.get("output", {}).get("nrcvb_buy_qty", 0)
-                         or buyable.get("nrcvb_buy_qty", 0) or 0)
+            max_qty = int(
+                buyable.get("nrcvb_buy_qty") or  # 미수없는매수수량
+                buyable.get("max_buy_qty") or     # 최대매수수량 (폴백)
+                buyable.get("output", {}).get("nrcvb_buy_qty") or
+                buyable.get("output", {}).get("max_buy_qty") or
+                0
+            )
+            logger.info(
+                f"check_buyable({stock_code}): nrcvb={buyable.get('nrcvb_buy_qty')}, "
+                f"max={buyable.get('max_buy_qty')}, cash={buyable.get('ord_psbl_cash')}, "
+                f"keys={list(buyable.keys())[:15]}"
+            )
 
             if max_qty <= 0:
                 logger.warning(f"Cannot buy {stock_code}: no buying power (max_qty=0)")
