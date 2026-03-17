@@ -15,6 +15,7 @@ const STORAGE_KEYS = {
   sessions: 'kis-sessions',
   messages: 'kis-messages',
   activeSession: 'kis-active-session',
+  chatOpen: 'kis-chat-open',
 };
 
 function loadFromStorage<T>(key: string, fallback: T): T {
@@ -34,7 +35,9 @@ function App() {
   const { theme, toggleTheme } = useTheme();
   const { settings, saveSettings, error: settingsError } = useSettings();
   const [currentView, setCurrentView] = useState<AppView>('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(
+    () => loadFromStorage(STORAGE_KEYS.chatOpen, false)
+  );
   const [sessions, setSessions] = useState<Session[]>(
     () => loadFromStorage(STORAGE_KEYS.sessions, DEFAULT_SESSIONS)
   );
@@ -57,6 +60,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.activeSession, JSON.stringify(activeSessionId));
   }, [activeSessionId]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.chatOpen, JSON.stringify(isChatOpen));
+  }, [isChatOpen]);
 
   const activeMessages = allMessages[activeSessionId] ?? [];
   const activeSession = sessions.find((s) => s.id === activeSessionId);
@@ -87,7 +94,7 @@ function App() {
 
   const handleNewChat = useCallback(() => {
     handleNewSession();
-    setCurrentView('chat');
+    setIsChatOpen(true);
   }, [handleNewSession]);
 
   const handleFirstMessage = useCallback((sessionId: string, preview: string) => {
@@ -100,9 +107,6 @@ function App() {
 
   const handleSelectSession = useCallback((id: string) => {
     setActiveSessionId(id);
-    if (window.innerWidth <= 768) {
-      setSidebarOpen(false);
-    }
   }, []);
 
   const handleDeleteSession = useCallback((id: string) => {
@@ -134,8 +138,8 @@ function App() {
       {currentView !== 'dashboard' && currentView !== 'reports' && currentView !== 'agents' && (
         <>
           <div
-            className={`sidebar-overlay ${sidebarOpen ? 'visible' : ''}`}
-            onClick={() => setSidebarOpen(false)}
+            className={`sidebar-overlay ${isChatOpen ? 'visible' : ''}`}
+            onClick={() => setIsChatOpen(false)}
           />
           <Sidebar
             sessions={sessions}
@@ -148,20 +152,20 @@ function App() {
             onOpenReports={() => setCurrentView('reports')}
             onOpenAgents={() => setCurrentView('agents')}
             currentView={currentView}
-            className={sidebarOpen ? 'open' : 'collapsed'}
+            className={isChatOpen ? 'open' : 'collapsed'}
           />
         </>
       )}
       <main className="main-content">
         <HeaderBar
           sessionTitle={activeSession?.title ?? '새 대화'}
-          onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
-          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setIsChatOpen((prev) => !prev)}
+          sidebarOpen={isChatOpen}
           theme={theme}
           onToggleTheme={toggleTheme}
           onOpenSettings={() => setCurrentView('settings')}
           onOpenDashboard={() => setCurrentView('dashboard')}
-          onOpenChat={() => setCurrentView('chat')}
+          onOpenChat={() => setIsChatOpen(true)}
           onOpenReports={() => setCurrentView('reports')}
           onOpenAgents={() => setCurrentView('agents')}
           currentView={currentView}
@@ -173,21 +177,14 @@ function App() {
             settings={settings}
             onSave={saveSettings}
             error={settingsError}
-            onBack={() => setCurrentView('chat')}
+            onBack={() => setCurrentView('dashboard')}
           />
         ) : currentView === 'dashboard' ? (
           <DashboardView />
         ) : currentView === 'reports' ? (
           <ReportViewer />
-        ) : currentView === 'agents' ? (
-          <AgentWorkflow />
         ) : (
-          <ChatView
-            sessionId={activeSessionId}
-            messages={activeMessages}
-            setMessages={setActiveMessages}
-            onFirstMessage={handleFirstMessage}
-          />
+          <AgentWorkflow />
         )}
       </main>
     </div>

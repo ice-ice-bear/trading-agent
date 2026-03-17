@@ -170,7 +170,7 @@ export interface Report {
   agent_id: string;
 }
 
-export type AppView = 'chat' | 'settings' | 'dashboard' | 'agents' | 'reports';
+export type AppView = 'settings' | 'dashboard' | 'agents' | 'reports';
 
 // --- Report Summary types ---
 
