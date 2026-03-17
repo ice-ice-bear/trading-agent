@@ -248,6 +248,12 @@ export async function generateReport(
   return res.json();
 }
 
+export async function getReport(reportId: number): Promise<import('../types').Report> {
+  const res = await fetch(`/api/reports/${reportId}`);
+  if (!res.ok) throw new Error('Failed to fetch report');
+  return res.json();
+}
+
 // --- Task API ---
 
 export async function getTasks(): Promise<{ tasks: import('../types').ScheduledTask[] }> {
