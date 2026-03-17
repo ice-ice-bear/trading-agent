@@ -61,8 +61,8 @@ Refactor to a **dashboard-first layout** with:
 #### `HeaderBar.tsx` (simplified)
 - **Removed:** Navigation tabs (Chat, Dashboard, Agents, Reports), sidebar toggle, new chat button
 - **Kept:** Brand "KIS Trading", trading mode badge, MCP status indicator, tools count badge, settings button, theme toggle
-- **Added:** Hamburger menu (only visible when chat drawer is open, toggles session list within drawer)
 - Height reduced from current size to ~48px
+- No hamburger menu — session management lives entirely in the ChatDrawer header
 
 #### `App.tsx` (state changes)
 - `AppView` type: remove `'chat'` — becomes `'dashboard' | 'settings' | 'agents' | 'reports'`
@@ -70,6 +70,8 @@ Refactor to a **dashboard-first layout** with:
 - New state: `isChatOpen: boolean` (persisted to localStorage key `kis-chat-open`)
 - Remove: `sidebarOpen` state (replaced by chat drawer and icon rail)
 - All existing state for sessions, messages, theme remain unchanged
+- **`handleNewChat`:** Updated to create a new session + `setIsChatOpen(true)` (no longer sets `currentView` to `'chat'`). Triggered from ChatDrawer's "new chat" button.
+- **Settings `onBack`:** Updated to navigate to `'dashboard'` instead of `'chat'`
 
 ### Deleted Components
 
@@ -127,18 +129,25 @@ App.tsx
 - Chat opens as **full-screen overlay** with back button
 - No split view — screen too narrow
 
+## Behavioral Details
+
+- **Chat drawer persists across view switches:** If the chat drawer is open on Dashboard and the user clicks Agents, the drawer stays open. `isChatOpen` is independent of `currentView`.
+- **Session selection in drawer:** Selecting a session from the dropdown auto-closes the dropdown (not the drawer). On mobile full-screen overlay, session selection keeps the overlay open.
+- **Keyboard shortcut:** `Cmd+Shift+C` (Mac) / `Ctrl+Shift+C` (Windows) toggles the chat drawer.
+
 ## CSS Strategy
 
 - Use CSS Grid for the main layout (`AppLayout`)
 - CSS custom properties for drawer width: `--chat-drawer-width: 380px`
-- CSS transitions for smooth open/close: `transition: grid-template-columns 300ms ease`
+- **Chat drawer animation:** Use `transform: translateX()` on the drawer panel + `margin-right` or flex-basis transition on the main content for the push effect. Avoid animating `grid-template-columns` directly as browser support for this animation is inconsistent. Instead, render both columns always and toggle the drawer's `translateX(100%)` / `translateX(0)` with the main content area adjusting via `margin-right: var(--chat-drawer-width)` transition.
 - Media queries at 768px and 1024px breakpoints
 - Reuse existing CSS variable system (colors, spacing, radius, transitions)
-- Icon rail uses existing `--sidebar-bg` and `--sidebar-text` variables
+- Icon rail: introduce `--rail-bg` and `--rail-text` CSS variables (mapped to existing sidebar color values initially, but semantically correct for the new component)
 
 ## Migration Notes
 
 - No backend changes required — this is purely a frontend layout refactor
 - No API changes — all data flow remains the same
 - localStorage key `kis-chat-open` is new; existing keys unchanged
-- The `'chat'` value in stored `currentView` needs a migration: if localStorage has `currentView === 'chat'`, default to `'dashboard'`
+- `currentView` is not currently persisted to localStorage, so no migration is needed for stored view state. The default simply changes from `'chat'` to `'dashboard'` in code.
+- All references to `setCurrentView('chat')` must be replaced: `handleNewChat` → opens chat drawer instead; Settings `onBack` → navigates to `'dashboard'`
