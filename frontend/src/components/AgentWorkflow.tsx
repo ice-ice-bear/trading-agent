@@ -415,6 +415,7 @@ export default function AgentWorkflow() {
     <div className="agent-workflow">
       {/* Section 1: DAG */}
       <div className="dag-container">
+        <div className="dag-section-label">Agent Pipeline</div>
         <div className="dag-row">
           {DAG_LAYOUT.row1.map((id) => (
             <DagNode
