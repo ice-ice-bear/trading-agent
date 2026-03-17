@@ -11,13 +11,6 @@ const DAG_LAYOUT = {
   row2: ['market_scanner', null, 'report_generator'],
 } as const;
 
-// Edges: [from, to] pairs for arrows (used for documentation / future SVG rendering)
-const _DAG_EDGES: [string, string][] = [
-  ['portfolio_monitor', 'risk_manager'],
-  ['market_scanner', 'risk_manager'],
-  ['risk_manager', 'trading_executor'],
-];
-void _DAG_EDGES;
 
 function timeAgo(timestamp: string): string {
   const diff = Date.now() - parseUTC(timestamp).getTime();
@@ -82,8 +75,9 @@ export default function AgentWorkflow() {
     // Pulse the agent node
     if (last.agent_id) {
       setPulsingAgent(last.agent_id);
-      setTimeout(() => setPulsingAgent(null), 1000);
     }
+
+    const pulseTimer = last.agent_id ? setTimeout(() => setPulsingAgent(null), 1000) : undefined;
 
     // Prepend to event list (dedup)
     setAgentEvents((prev) => {
@@ -94,7 +88,10 @@ export default function AgentWorkflow() {
 
     // Refetch agents + logs for status updates (debounced via setTimeout)
     const timer = setTimeout(fetchData, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      if (pulseTimer) clearTimeout(pulseTimer);
+      clearTimeout(timer);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastWsEventCount]);
 
