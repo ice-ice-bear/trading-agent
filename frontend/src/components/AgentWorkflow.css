@@ -146,10 +146,9 @@
 .dag-connector {
   display: flex;
   align-items: center;
-  position: relative;
-  width: 70px;
+  width: 56px;
   flex-shrink: 0;
-  margin: 0 var(--space-1);
+  margin: 0 var(--space-2);
 }
 
 .dag-connector-line {
@@ -166,18 +165,6 @@
   flex-shrink: 0;
 }
 
-.dag-connector-label {
-  position: absolute;
-  top: calc(100% + 2px);
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 9px;
-  font-family: var(--font-mono);
-  color: var(--color-text-secondary);
-  white-space: nowrap;
-  opacity: 0.6;
-  letter-spacing: -0.01em;
-}
 
 /* --- Independent agents row --- */
 .dag-independent-row {

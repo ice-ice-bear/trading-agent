@@ -437,13 +437,11 @@ export default function AgentWorkflow() {
             <div className="dag-connector">
               <div className="dag-connector-line" />
               <div className="dag-connector-arrow" />
-              <span className="dag-connector-label">portfolio.updated</span>
             </div>
             <DagNode agent={getAgentById('risk_manager')} agentId="risk_manager" lastLog={getLastLog('risk_manager')} selected={selectedAgent === 'risk_manager'} pulsing={pulsingAgent === 'risk_manager'} running={runningAgent === 'risk_manager'} onClick={() => setSelectedAgent(selectedAgent === 'risk_manager' ? null : 'risk_manager')} onRun={() => handleRunAgent('risk_manager')} />
             <div className="dag-connector">
               <div className="dag-connector-line" />
               <div className="dag-connector-arrow" />
-              <span className="dag-connector-label">signal.approved</span>
             </div>
             <DagNode agent={getAgentById('trading_executor')} agentId="trading_executor" lastLog={getLastLog('trading_executor')} selected={selectedAgent === 'trading_executor'} pulsing={pulsingAgent === 'trading_executor'} running={runningAgent === 'trading_executor'} onClick={() => setSelectedAgent(selectedAgent === 'trading_executor' ? null : 'trading_executor')} onRun={() => handleRunAgent('trading_executor')} />
           </div>
