@@ -182,36 +182,43 @@ DEFAULT_TASKS = [
     {
         "name": "morning_scan",
         "agent_id": "market_scanner",
-        "cron_expression": "5 9 * * 1-5",
-        "enabled": 0,
+        "cron_expression": "30 9 * * 1-5",  # 09:30 — after opening auction settles
+        "enabled": 1,
         "config_json": "{}",
     },
     {
         "name": "midday_scan",
         "agent_id": "market_scanner",
         "cron_expression": "0 12 * * 1-5",
-        "enabled": 0,
+        "enabled": 1,
+        "config_json": "{}",
+    },
+    {
+        "name": "afternoon_scan",
+        "agent_id": "market_scanner",
+        "cron_expression": "0 14 * * 1-5",  # 14:00 — late-day momentum before close
+        "enabled": 1,
         "config_json": "{}",
     },
     {
         "name": "closing_check",
         "agent_id": "portfolio_monitor",
-        "cron_expression": "20 15 * * 1-5",
+        "cron_expression": "35 15 * * 1-5",  # 15:35 — after market close, final prices settled
         "enabled": 1,
         "config_json": "{}",
     },
     {
         "name": "daily_report",
         "agent_id": "report_generator",
-        "cron_expression": "0 16 * * 1-5",
-        "enabled": 0,
+        "cron_expression": "10 16 * * 1-5",  # 16:10 — after after-hours session ends
+        "enabled": 1,
         "config_json": "{}",
     },
     {
         "name": "weekly_report",
         "agent_id": "report_generator",
         "cron_expression": "0 17 * * 5",
-        "enabled": 0,
+        "enabled": 1,
         "config_json": "{}",
     },
 ]
