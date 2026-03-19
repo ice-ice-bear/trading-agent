@@ -115,7 +115,7 @@ async def get_daily_chart(stock_code: str, period: str = "D") -> list[dict]:
         if isinstance(data, dict):
             for key in ("output2", "output", "output1"):
                 if key in data and isinstance(data[key], list):
-                    return data[key][:30]
+                    return data[key][:90]
         return []
     except Exception:
         return []
