@@ -215,50 +215,44 @@ async def run_chief_debate(
         dart_section = f"\n## DART 재무 데이터\n{json.dumps(dart_financials, ensure_ascii=False, indent=2)}\n"
 
     prompt = f"""{critic_prefix}당신은 Chief Market Analyst입니다.
-5명의 전문가 의견({consensus_hint})을 검토하고 토론 시뮬레이션을 통해 최종 매매 결정을 내리세요.
+5명의 전문가 의견({consensus_hint})을 검토하고 최종 매매 결정을 내리세요.
 
-## 종목 정보
-{json.dumps(stock_info, ensure_ascii=False, indent=2)}
+종목: {json.dumps(stock_info, ensure_ascii=False)}
 
-## 전문가 의견
+전문가 의견:
 {analyses_text}
 
-## 포트폴리오 현황
-{json.dumps(portfolio_context, ensure_ascii=False, indent=2)}
+포트폴리오: {json.dumps(portfolio_context, ensure_ascii=False)}
 {dart_section}
-## 토론 진행
-Round 1: 가장 큰 이견에 대해 각 전문가 입장 간략히 정리
-Round 2: 조건부 동의 또는 거부 이유
+분석 후 아래 JSON 형식으로 응답하세요. 반드시 ```json 코드 블록으로 감싸세요.
+확률 합계(bull+base+bear)는 반드시 1.0이어야 합니다.
 
-## 최종 결정 (JSON만 출력)
 ```json
 {{
-  "direction": "buy|sell|hold",
+  "direction": "buy 또는 sell 또는 hold",
   "bull": {{"label": "강세", "price_target": 95000, "upside_pct": 18.5, "probability": 0.35}},
   "base": {{"label": "기본", "price_target": 84000, "upside_pct": 5.0, "probability": 0.45}},
   "bear": {{"label": "약세", "price_target": 72000, "upside_pct": -10.0, "probability": 0.20}},
-  "rr_score": 4.36,
-  "variant_view": "시장이 구체적으로 오해하는 점 — 데이터 근거 포함",
-  "expert_stances": {{
-    "기술적 분석가 (Technical Analyst)": "bullish",
-    "모멘텀 트레이더 (Momentum Trader)": "neutral",
-    "리스크 평가자 (Risk Assessor)": "bearish",
-    "포트폴리오 전략가 (Portfolio Strategist)": "bullish",
-    "기본적분석가": "bullish"
-  }}
+  "variant_view": "시장이 오해하는 구체적 포인트 — 데이터 근거 포함",
+  "expert_stances": {{"전문가명": "bullish/bearish/neutral"}}
 }}
-```
-확률 합계(bull+base+bear)는 반드시 1.0이 되어야 합니다."""
+```"""
 
     try:
         response = await client.messages.create(
             model=model,
-            max_tokens=1536,
+            max_tokens=2048,
+            system="You are a financial analyst. Always end your response with a JSON code block wrapped in ```json ... ```. Keep analysis brief and focus on the final JSON output.",
             messages=[{"role": "user", "content": prompt}],
         )
         text = "".join(b.text for b in response.content if hasattr(b, "text"))
         raw = _parse_json_response(text)
         if not raw:
+            logger.warning(
+                f"Chief debate JSON parse failed for {stock_info.get('code')}. "
+                f"stop_reason={response.stop_reason}, "
+                f"text_len={len(text)}, first_200={text[:200]!r}"
+            )
             return None
 
         bull = Scenario(**raw["bull"])

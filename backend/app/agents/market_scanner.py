@@ -163,6 +163,7 @@ class MarketScannerAgent(BaseAgent):
 
             enriched.append({
                 **candidate,
+                "current_price": current_price,
                 "indicators": indicators,
                 "ohlcv": ohlcv,
             })
@@ -188,11 +189,11 @@ class MarketScannerAgent(BaseAgent):
         # --- Stage 2.5: Confidence grading ---
         confidence_grades: dict[str, str] = {
             "current_price": "A" if current_price else "D",
-            "volume": "A" if indicators.get("volume", 0) > 0 else "D",
+            "volume": "A" if stock_data.get("ohlcv", {}).get("volumes", [0])[-1] > 0 else "D",
         }
 
         # --- Stage 2.6: Fetch DART fundamentals ---
-        dart_result = await dart_client.fetch(stock_code)
+        dart_result = await dart_client.fetch(stock_code, current_price=current_price)
         dart_financials = dart_result.get("financials")
         confidence_grades.update(dart_result.get("confidence_grades", {}))
 
