@@ -48,7 +48,8 @@
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-sm);
-  overflow: hidden;
+  overflow: visible;
+  flex-shrink: 0;
 }
 
 /* --- DAG Header bar --- */
@@ -59,6 +60,7 @@
   padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .dag-header-left {
@@ -135,12 +137,17 @@
   align-items: center;
   justify-content: center;
   gap: 0;
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
 }
 
 .dag-pipeline-row .dag-node {
-  flex: 1;
-  min-width: 0;
-  max-width: 280px;
+  flex: 0 0 auto;
+  min-width: 180px;
+  max-width: 240px;
+  width: 22%;
 }
 
 /* --- Inline connector between nodes --- */
@@ -150,7 +157,8 @@
   flex-direction: column;
   justify-content: center;
   width: 80px;
-  flex-shrink: 0;
+  min-width: 56px;
+  flex-shrink: 1;
   margin: 0 var(--space-1);
   gap: var(--space-1);
 }
@@ -190,10 +198,12 @@
   display: flex;
   justify-content: center;
   gap: var(--space-5);
+  flex-wrap: wrap;
 }
 
 .dag-independent-row .dag-node {
-  flex: 0 1 280px;
+  flex: 0 1 240px;
+  min-width: 180px;
 }
 
 .dag-node-spacer {
@@ -234,7 +244,7 @@
 /* === DAG Node === */
 .dag-node {
   flex: 1;
-  max-width: 220px;
+  max-width: 240px;
   padding: var(--space-4);
   background: var(--color-bg);
   border: 1px solid var(--color-border);
@@ -477,24 +487,26 @@
   opacity: 0;
   overflow: hidden;
   transition: max-height 0.25s ease, opacity 0.2s ease;
+  flex-shrink: 0;
 }
 
 .detail-panel--open {
-  max-height: 500px;
+  max-height: 320px;
   opacity: 1;
   overflow-y: auto;
 }
 
 .detail-panel {
   display: flex;
-  gap: var(--space-6);
-  padding: var(--space-5);
+  gap: var(--space-5);
+  padding: var(--space-4) var(--space-5);
   background: var(--color-surface);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   border-left: 3px solid var(--color-primary);
   box-shadow: var(--shadow-sm);
   position: relative;
+  flex-wrap: wrap;
 }
 
 .detail-panel::before {
@@ -514,7 +526,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  min-width: 0;
+  min-width: 180px;
 }
 
 .detail-agent-name {
@@ -863,6 +875,25 @@
 /* ============================================================
    Responsive
    ============================================================ */
+
+/* Medium screens / chat-drawer-open scenario */
+@media (max-width: 1100px) {
+  .dag-pipeline-row .dag-node {
+    min-width: 150px;
+    width: 20%;
+  }
+  .dag-connector {
+    width: 56px;
+    min-width: 40px;
+  }
+  .dag-connector-label {
+    font-size: 8px;
+  }
+  .detail-panel--open {
+    max-height: 380px;
+  }
+}
+
 @media (max-width: 768px) {
   .agent-workflow {
     padding: var(--space-4);
@@ -872,11 +903,13 @@
   }
   .timeline-type { min-width: auto; }
   .timeline-agent { min-width: auto; }
-  .dag-pipeline-row { flex-wrap: wrap; gap: var(--space-3); }
-  .dag-pipeline-row .dag-node { flex: 1 1 140px; min-width: 140px; }
+  .dag-pipeline-row { flex-wrap: wrap; gap: var(--space-3); overflow-x: visible; }
+  .dag-pipeline-row .dag-node { flex: 1 1 140px; min-width: 140px; width: auto; }
   .dag-connector { display: none; }
   .dag-independent-row { flex-wrap: wrap; }
   .dag-independent-row .dag-node { flex: 1 1 140px; min-width: 140px; }
   .dag-row-group { padding: var(--space-3) var(--space-4); }
   .dag-header { flex-direction: column; gap: var(--space-2); align-items: flex-start; }
+  .detail-panel { flex-direction: column; }
+  .detail-col { min-width: 0; }
 }

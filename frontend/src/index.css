@@ -195,12 +195,20 @@ body {
 .scenario-prob { font-size: 11px; color: #666; }
 
 /* Expert stances */
-.expert-panel { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.expert-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+  justify-content: center;
+}
 .expert-chip {
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 12px;
   font-size: 11px;
+  font-weight: 500;
   white-space: nowrap;
+  letter-spacing: 0.01em;
 }
 .stance-bullish { background: #d4edda; color: #155724; }
 .stance-bearish { background: #f8d7da; color: #721c24; }
