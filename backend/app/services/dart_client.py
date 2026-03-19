@@ -41,7 +41,7 @@ class DartClient:
             return
         await self._refresh_corp_codes_if_stale()
 
-    async def fetch(self, stock_code: str) -> dict:
+    async def fetch(self, stock_code: str, current_price: float = 0) -> dict:
         """
         Fetch DART fundamentals for a stock.
 
@@ -78,13 +78,26 @@ class DartClient:
                 logger.warning(f"No DART corp code for {stock_code}")
                 return {"enabled": True, "financials": None, "confidence_grades": _grade_d}
 
-            # Fetch from DART API
-            year = str(datetime.now().year - 1)  # use prior year for complete data
-            financials = await self._fetch_financials(corp_code, year)
-            dividend = await self._fetch_dividend(corp_code, year)
+            # Fetch from DART API — try year-1 first, fall back to year-2
+            # (annual reports for year N are typically filed by April of year N+1)
+            year = datetime.now().year - 1
+            financials = await self._fetch_financials(corp_code, str(year))
+            if not financials:
+                financials = await self._fetch_financials(corp_code, str(year - 1))
+                year = year - 1
+            dividend = await self._fetch_dividend(corp_code, str(year))
 
             if financials:
                 financials["dart_dividend_yield"] = dividend
+
+                # Compute PBR if we have equity, share count, and current price
+                total_equity = financials.pop("_total_equity", None)
+                if total_equity and current_price > 0:
+                    shares = await self._fetch_share_count(corp_code, str(year))
+                    if shares and shares > 0:
+                        bps = total_equity / shares
+                        financials["dart_pbr"] = round(current_price / bps, 2)
+
                 await self._cache_financials(stock_code, financials)
                 return self._build_result(financials, enabled=True)
 
@@ -132,9 +145,9 @@ class DartClient:
             now = datetime.now().isoformat()
 
             for corp in corps:
-                stock_code = corp.get("stock_code", "").strip()
-                corp_code = corp.get("corp_code", "").strip()
-                corp_name = corp.get("corp_name", "").strip()
+                stock_code = (corp.get("stock_code") or "").strip()
+                corp_code = (corp.get("corp_code") or "").strip()
+                corp_name = (corp.get("corp_name") or "").strip()
                 if stock_code and corp_code:
                     await execute_insert(
                         """INSERT OR REPLACE INTO dart_corp_codes
@@ -188,7 +201,14 @@ class DartClient:
             if data.get("status") != "000":
                 return None
 
-            items = {item["account_nm"]: item for item in data.get("list", [])}
+            # Prefer Balance Sheet (BS) and Income Statement (IS) entries over
+            # Statement of Changes in Equity (SCE) — first-wins dedup ensures
+            # 자본총계/부채총계 come from 재무상태표, not 자본변동표
+            items: dict = {}
+            for item in data.get("list", []):
+                nm = item["account_nm"]
+                if nm not in items:
+                    items[nm] = item
             return self._parse_financials(items)
 
         except Exception as e:
@@ -196,33 +216,71 @@ class DartClient:
             return None
 
     def _parse_financials(self, items: dict) -> dict:
-        def _num(key: str) -> float | None:
+        def _num(key: str, field: str = "thstrm_amount") -> float | None:
             item = items.get(key)
             if not item:
                 return None
-            val_str = item.get("thstrm_amount", "").replace(",", "")
+            val_str = (item.get(field) or "").replace(",", "")
             try:
                 return float(val_str)
             except (ValueError, TypeError):
                 return None
 
-        revenue = _num("매출액")
-        op_profit = _num("영업이익")
-        net_profit = _num("당기순이익")
+        def _num_first(*keys: str, field: str = "thstrm_amount") -> float | None:
+            """Try multiple field names, return first non-None value."""
+            for key in keys:
+                val = _num(key, field)
+                if val is not None:
+                    return val
+            return None
+
+        # EPS field name candidates (varies by industry)
+        _eps_keys = (
+            "기본주당이익", "기본주당이익(손실)",
+            "보통주기본주당이익", "보통주기본주당이익(손실)",
+            "계속영업기본주당이익(손실)",
+        )
+
+        # DART field names vary by industry:
+        #   Manufacturing: 매출액, 영업이익, 기본주당이익
+        #   Insurance:     보험수익, 영업이익, 보통주기본주당이익
+        #   Construction:  매출액, 영업이익(손실), 기본주당이익(손실)
+        #   Others:        수익(매출액), 영업이익(손실), 계속영업기본주당이익(손실)
+        revenue = _num_first("매출액", "수익(매출액)", "영업수익", "보험수익", "보험영업수익")
+        op_profit = _num_first("영업이익", "영업이익(손실)")
+        net_profit = _num_first("당기순이익", "당기순이익(손실)")
+        total_debt = _num("부채총계")
+        total_equity = _num("자본총계")
 
         operating_margin = (
             (op_profit / revenue * 100) if revenue and op_profit else None
+        )
+
+        eps = _num_first(*_eps_keys)
+
+        # EPS YoY: compare current year vs prior year (frmtrm_amount)
+        eps_prior = _num_first(*_eps_keys, field="frmtrm_amount")
+        eps_yoy_pct = None
+        if eps is not None and eps_prior is not None and eps_prior != 0:
+            eps_yoy_pct = round((eps - eps_prior) / abs(eps_prior) * 100, 1)
+
+        # Debt ratio = 부채총계 / 자본총계 * 100
+        debt_ratio = (
+            (total_debt / total_equity * 100)
+            if total_debt is not None and total_equity
+            else None
         )
 
         return {
             "dart_revenue": revenue,
             "dart_operating_profit": op_profit,
             "dart_net_profit": net_profit,
-            "dart_per": _num("주당순이익(PER)"),
-            "dart_pbr": _num("주당순자산(PBR)"),
-            "dart_eps_yoy_pct": None,   # requires prior year — set to None for now
-            "dart_debt_ratio": _num("부채비율"),
+            "dart_per": eps,  # EPS — PER requires market price
+            "dart_pbr": None,  # computed in fetch() after share count lookup
+            "dart_eps_yoy_pct": eps_yoy_pct,
+            "dart_debt_ratio": debt_ratio,
             "dart_operating_margin": operating_margin,
+            "_total_equity": total_equity,  # used for PBR calculation
         }
 
     async def _fetch_dividend(self, corp_code: str, year: str) -> float | None:
@@ -241,6 +299,31 @@ class DartClient:
         except Exception:
             return None
         return None  # items list was empty
+
+    async def _fetch_share_count(self, corp_code: str, year: str) -> int | None:
+        """Fetch outstanding share count (보통주 발행주식총수) from DART."""
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(
+                    f"{_DART_BASE}/stockTotqySttus.json",
+                    params={
+                        "crtfc_key": self._api_key,
+                        "corp_code": corp_code,
+                        "bsns_year": year,
+                        "reprt_code": "11011",
+                    },
+                )
+                resp.raise_for_status()
+                data = resp.json()
+            if data.get("status") != "000":
+                return None
+            for item in data.get("list", []):
+                if item.get("se") == "보통주":
+                    qty_str = (item.get("istc_totqy") or "").replace(",", "")
+                    return int(qty_str) if qty_str else None
+        except Exception:
+            return None
+        return None
 
     # ------------------------------------------------------------------
     # Internal — result builder
