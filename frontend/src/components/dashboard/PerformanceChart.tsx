@@ -38,7 +38,7 @@ export default function PerformanceChart({ refreshTrigger }: Props) {
 
   return (
     <div className="card">
-      <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="card-header">
         <h3>성과 차트</h3>
         <div style={{ display: 'flex', gap: '4px' }}>
           {PERIODS.map((p) => (
@@ -74,7 +74,7 @@ export default function PerformanceChart({ refreshTrigger }: Props) {
             />
           </svg>
 
-          <div style={{ display: 'flex', gap: '16px', marginTop: '8px', fontSize: '0.85rem' }}>
+          <div className="perf-kpi-row">
             <span className={data.returns_pct >= 0 ? 'text-positive' : 'text-negative'}>
               수익률 {data.returns_pct >= 0 ? '+' : ''}{data.returns_pct.toFixed(2)}%
             </span>

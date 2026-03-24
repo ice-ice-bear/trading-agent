@@ -25,14 +25,14 @@ export default function RiskDashboard() {
     <div className="card">
       <div className="card-header"><h3>리스크 분석</h3></div>
       <div className="card-body">
-        <div style={{ display: 'flex', gap: '16px', fontSize: '0.85rem', marginBottom: '12px' }}>
+        <div className="risk-kpi-row">
           <div>
             <span className="text-muted">VaR(95%) </span>
-            <strong style={{ color: 'var(--color-negative, #ef4444)' }}>{risk.var_95.toFixed(2)}%</strong>
+            <strong className="text-negative">{risk.var_95.toFixed(2)}%</strong>
           </div>
           <div>
             <span className="text-muted">VaR(99%) </span>
-            <strong style={{ color: 'var(--color-negative, #ef4444)' }}>{risk.var_99.toFixed(2)}%</strong>
+            <strong className="text-negative">{risk.var_99.toFixed(2)}%</strong>
           </div>
           <div>
             <span className="text-muted">베타 </span>
@@ -41,33 +41,33 @@ export default function RiskDashboard() {
         </div>
         {Object.keys(risk.sector_breakdown).length > 0 && (
           <div>
-            <span className="text-muted" style={{ fontSize: '0.8rem' }}>섹터 비중</span>
+            <span className="risk-sector-label">섹터 비중</span>
             {Object.entries(risk.sector_breakdown)
               .sort(([, a], [, b]) => b - a)
               .map(([sector, pct]) => (
-                <div key={sector} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', padding: '2px 0' }}>
+                <div key={sector} className="risk-sector-row">
                   <span>{sector}</span>
-                  <span style={{ color: pct > 40 ? 'var(--color-negative, #ef4444)' : undefined }}>{pct.toFixed(1)}%</span>
+                  <span className={pct > 40 ? 'text-negative' : ''}>{pct.toFixed(1)}%</span>
                 </div>
               ))}
           </div>
         )}
         {risk.correlation && risk.correlation.matrix.length > 0 && (
-          <div style={{ marginTop: '12px' }}>
-            <span className="text-muted" style={{ fontSize: '0.8rem' }}>종목 상관관계</span>
-            <table style={{ width: '100%', fontSize: '0.65rem', marginTop: '4px', borderCollapse: 'collapse', textAlign: 'center' }}>
+          <div style={{ marginTop: 'var(--space-3)' }}>
+            <span className="risk-corr-label">종목 상관관계</span>
+            <table className="risk-corr-table">
               <thead>
                 <tr>
-                  <th style={{ padding: '2px', textAlign: 'left' }}></th>
+                  <th></th>
                   {risk.correlation.codes.map(c => (
-                    <th key={c} style={{ padding: '2px', fontWeight: 400 }}>{c.slice(-4)}</th>
+                    <th key={c}>{c.slice(-4)}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {risk.correlation.matrix.map((row, i) => (
                   <tr key={i}>
-                    <td style={{ textAlign: 'left', fontWeight: 600, padding: '2px' }}>{risk.correlation!.codes[i].slice(-4)}</td>
+                    <td className="row-header">{risk.correlation!.codes[i].slice(-4)}</td>
                     {row.map((val, j) => {
                       const absVal = Math.abs(val);
                       const bg = i === j ? 'transparent'
@@ -75,7 +75,7 @@ export default function RiskDashboard() {
                         : val < -0.3 ? `rgba(34, 197, 94, ${absVal * 0.4})`
                         : 'transparent';
                       return (
-                        <td key={j} style={{ padding: '2px', background: bg, borderRadius: '2px' }}>
+                        <td key={j} style={{ background: bg, borderRadius: '2px' }}>
                           {i === j ? '-' : val.toFixed(2)}
                         </td>
                       );

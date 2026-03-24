@@ -77,12 +77,12 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
   })();
 
   return (
-    <div style={{ border: '1px solid #dee2e6', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+    <div className="card" style={{ padding: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <strong>{stock_name}</strong>
-          <span style={{ color: '#888', marginLeft: 6, fontSize: 12 }}>({stock_code})</span>
+          <span className="text-muted" style={{ marginLeft: 6, fontSize: 'var(--text-xs)' }}>({stock_code})</span>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <span style={{
@@ -118,7 +118,7 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
                   {sign}{Math.abs(s.upside_pct).toFixed(1)}%
                 </div>
                 <div className="scenario-prob">확률 {(s.probability * 100).toFixed(0)}%</div>
-                <div style={{ fontSize: 10, color: '#555' }}>
+                <div className="text-muted" style={{ fontSize: 10 }}>
                   {s.price_target.toLocaleString('ko-KR')}원
                 </div>
               </div>
@@ -139,14 +139,15 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
       {/* Variant view */}
       {variant_view && (
         <div className="variant-view">
-          <span style={{ fontSize: 10, fontWeight: 700, color: '#007bff' }}>시장 오해: </span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-primary)' }}>시장 오해: </span>
           {variant_view}
         </div>
       )}
 
       {/* Expand/collapse toggle */}
       <div
-        style={{ textAlign: 'center', padding: '4px 0', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--color-muted, #6b7280)' }}
+        className="text-muted"
+        style={{ textAlign: 'center', padding: 'var(--space-1) 0', cursor: 'pointer', fontSize: 'var(--text-xs)' }}
         onClick={() => setExpanded(!expanded)}
       >
         {expanded ? '▲ 간략히 보기' : '▼ 상세 보기'}
@@ -157,7 +158,7 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
       {signal.risk_notes && (
         <div className="signal-section">
           <span className="section-label">리스크 노트</span>
-          <p className="text-muted" style={{ fontSize: '0.8rem', margin: '4px 0 0' }}>{signal.risk_notes}</p>
+          <p className="text-muted" style={{ fontSize: 'var(--text-xs)', margin: 'var(--space-1) 0 0' }}>{signal.risk_notes}</p>
         </div>
       )}
 
@@ -180,9 +181,9 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
             ))}
           </div>
           {expandedExperts && (
-            <div className="expert-details" style={{ marginTop: '8px', fontSize: '0.8rem' }}>
+            <div className="expert-details" style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)' }}>
               {Object.entries(signal.expert_stances).map(([name, stance]) => (
-                <div key={name} style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                <div key={name} style={{ padding: 'var(--space-1) 0', borderBottom: '1px solid var(--color-border-light, var(--color-border))' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <strong>{name}</strong>
                     <span className={`badge stance-${stance}`}>{stance}</span>
@@ -202,11 +203,11 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
         return (
           <div className="signal-section">
             <span className="section-label">수급 동향 ({trend.days || 20}일)</span>
-            <div style={{ display: 'flex', gap: '16px', fontSize: '0.8rem', marginTop: '4px' }}>
-              <span style={{ color: trend.foreign_net_buy >= 0 ? 'var(--color-positive, #22c55e)' : 'var(--color-negative, #ef4444)' }}>
+            <div style={{ display: 'flex', gap: 'var(--space-4)', fontSize: 'var(--text-xs)', marginTop: 'var(--space-1)' }}>
+              <span className={trend.foreign_net_buy >= 0 ? 'text-positive' : 'text-negative'}>
                 외국인 {trend.foreign_net_buy >= 0 ? '+' : ''}{Number(trend.foreign_net_buy).toLocaleString()}주
               </span>
-              <span style={{ color: trend.institution_net_buy >= 0 ? 'var(--color-positive, #22c55e)' : 'var(--color-negative, #ef4444)' }}>
+              <span className={trend.institution_net_buy >= 0 ? 'text-positive' : 'text-negative'}>
                 기관 {trend.institution_net_buy >= 0 ? '+' : ''}{Number(trend.institution_net_buy).toLocaleString()}주
               </span>
             </div>
@@ -222,10 +223,10 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
         return (
           <div className="signal-section">
             <span className="section-label">내부자 거래</span>
-            <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>
+            <div style={{ fontSize: 'var(--text-xs)', marginTop: 'var(--space-1)' }}>
               {trades.map((t, i) => (
                 <div key={i} className="text-muted">
-                  {t.reporter_name}: <span style={{ color: t.change_amount >= 0 ? 'var(--color-positive, #22c55e)' : 'var(--color-negative, #ef4444)' }}>
+                  {t.reporter_name}: <span className={t.change_amount >= 0 ? 'text-positive' : 'text-negative'}>
                     {t.change_amount >= 0 ? '+' : ''}{Number(t.change_amount).toLocaleString()}주
                   </span> ({t.report_date})
                 </div>
@@ -243,7 +244,7 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
         return (
           <div className="signal-section">
             <span className="section-label">뉴스 동향 ({news.sentiment})</span>
-            <ul style={{ fontSize: '0.75rem', margin: '4px 0 0 16px', padding: 0 }}>
+            <ul style={{ fontSize: 'var(--text-xs)', margin: 'var(--space-1) 0 0 var(--space-4)', padding: 0 }}>
               {news.headlines.slice(0, 3).map((h, i) => (
                 <li key={i} className="text-muted">{h}</li>
               ))}
@@ -278,8 +279,8 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
       </>)}
 
       {/* Footer: critic + approve/reject */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-        <div style={{ display: 'flex', gap: 12, fontSize: 11, color: '#888' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'var(--space-2)' }}>
+        <div className="text-muted" style={{ display: 'flex', gap: 'var(--space-3)', fontSize: 'var(--text-xs)' }}>
           <span>
             Critic: {critic_result === 'pass'
               ? '✓ 통과'

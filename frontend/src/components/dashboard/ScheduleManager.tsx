@@ -43,7 +43,7 @@ export default function ScheduleManager() {
   return (
     <div className="schedule-manager">
       <h4>스케줄 관리</h4>
-      <table className="table" style={{ fontSize: '0.85rem' }}>
+      <table className="table">
         <thead>
           <tr>
             <th>작업</th>
@@ -63,7 +63,7 @@ export default function ScheduleManager() {
                     <input
                       value={cronInput}
                       onChange={(e) => setCronInput(e.target.value)}
-                      style={{ width: '120px', fontSize: '0.8rem' }}
+                      style={{ width: '120px' }}
                       placeholder="*/30 * * * *"
                     />
                     <button className="btn btn-sm btn-primary" onClick={() => handleSaveCron(task.id)}>저장</button>

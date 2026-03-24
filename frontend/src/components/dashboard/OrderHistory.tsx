@@ -78,7 +78,7 @@ export default function OrderHistory({ refreshTrigger }: Props) {
               <td>
                 <span className={`badge status-${order.status}`}>{order.status}</span>
                 {order.signal_id && (
-                  <span className="signal-link text-muted" title={`Signal #${order.signal_id}`}> S</span>
+                  <span className="signal-link" title={`Signal #${order.signal_id}`}>S</span>
                 )}
               </td>
             </tr>
