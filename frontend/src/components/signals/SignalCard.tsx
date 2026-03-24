@@ -1,5 +1,5 @@
 // frontend/src/components/signals/SignalCard.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import type { Signal } from '../../types';
 import { ScenarioChart } from './ScenarioChart';
 import { FundamentalsKPI } from './FundamentalsKPI';
@@ -15,6 +15,7 @@ const directionColor = (d: string) =>
   d === 'buy' ? '#28a745' : d === 'sell' ? '#dc3545' : '#6c757d';
 
 export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onReject, acting }) => {
+  const [expandedExperts, setExpandedExperts] = useState(false);
   const {
     stock_name, stock_code, direction, rr_score, scenarios,
     variant_view, expert_stances, critic_result,
@@ -98,14 +99,44 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
         </div>
       )}
 
+      {/* Risk notes */}
+      {signal.risk_notes && (
+        <div className="signal-section">
+          <span className="section-label">리스크 노트</span>
+          <p className="text-muted" style={{ fontSize: '0.8rem', margin: '4px 0 0' }}>{signal.risk_notes}</p>
+        </div>
+      )}
+
       {/* Expert panel */}
-      {expert_stances && (
-        <div className="expert-panel">
-          {Object.entries(expert_stances).map(([name, stance]) => (
-            <span className={`expert-chip stance-${stance}`} key={name}>
-              {name}
-            </span>
-          ))}
+      {signal.expert_stances && Object.keys(signal.expert_stances).length > 0 && (
+        <div className="signal-section">
+          <div
+            className="section-header"
+            style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            onClick={() => setExpandedExperts(!expandedExperts)}
+          >
+            <span className="section-label">전문가 패널</span>
+            <span style={{ fontSize: '0.75rem' }}>{expandedExperts ? '▲' : '▼'}</span>
+          </div>
+          <div className="expert-chips">
+            {Object.entries(signal.expert_stances).map(([name, stance]) => (
+              <span key={name} className={`expert-chip stance-${stance}`} title={name}>
+                {name.split(' ')[0]}
+              </span>
+            ))}
+          </div>
+          {expandedExperts && (
+            <div className="expert-details" style={{ marginTop: '8px', fontSize: '0.8rem' }}>
+              {Object.entries(signal.expert_stances).map(([name, stance]) => (
+                <div key={name} style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <strong>{name}</strong>
+                    <span className={`badge stance-${stance}`}>{stance}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
