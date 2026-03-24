@@ -158,6 +158,26 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
         );
       })()}
 
+      {/* 내부자 거래 */}
+      {signal.metadata && (signal.metadata as Record<string, any>).insider_trades &&
+       ((signal.metadata as Record<string, any>).insider_trades as any[]).length > 0 && (() => {
+        const trades = (signal.metadata as Record<string, any>).insider_trades as any[];
+        return (
+          <div className="signal-section">
+            <span className="section-label">내부자 거래</span>
+            <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>
+              {trades.map((t: any, i: number) => (
+                <div key={i} className="text-muted">
+                  {t.reporter_name}: <span style={{ color: t.change_amount >= 0 ? 'var(--color-positive, #22c55e)' : 'var(--color-negative, #ef4444)' }}>
+                    {t.change_amount >= 0 ? '+' : ''}{Number(t.change_amount).toLocaleString()}주
+                  </span> ({t.report_date})
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* DART KPI tiles */}
       {dart_fundamentals && confidence_grades && (
         <FundamentalsKPI

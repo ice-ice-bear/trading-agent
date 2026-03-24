@@ -325,6 +325,49 @@ class DartClient:
             return None
         return None
 
+    async def fetch_insider_trades(self, stock_code: str, limit: int = 5) -> list[dict]:
+        """DART 임원 주요주주 특정증권등 소유상황 보고서 조회"""
+        if not self.enabled:
+            return []
+
+        corp_code = await self._get_corp_code(stock_code)
+        if not corp_code:
+            return []
+
+        try:
+            params = {
+                "crtfc_key": self._api_key,
+                "corp_code": corp_code,
+            }
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    "https://opendart.fss.or.kr/api/elestock.json",
+                    params=params,
+                    timeout=10,
+                )
+                data = resp.json()
+
+            if data.get("status") != "000":
+                return []
+
+            trades = []
+            for item in data.get("list", [])[:limit]:
+                shares_before = int(item.get("sp_stock_lmp_cnt", 0) or 0)
+                shares_after = int(item.get("sp_stock_lmp_irds_cnt", 0) or 0)
+                trades.append({
+                    "reporter_name": item.get("repror", ""),
+                    "position": item.get("isu_exctv_rgist_at", ""),
+                    "change_type": item.get("rcv_dl_srtnm", ""),
+                    "shares_before": shares_before,
+                    "shares_after": shares_after,
+                    "change_amount": shares_after - shares_before,
+                    "report_date": item.get("rcept_dt", ""),
+                })
+            return trades
+        except Exception as e:
+            logger.warning(f"Insider trades fetch failed for {stock_code}: {e}")
+            return []
+
     # ------------------------------------------------------------------
     # Internal — result builder
     # ------------------------------------------------------------------

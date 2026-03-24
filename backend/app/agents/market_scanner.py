@@ -205,6 +205,11 @@ class MarketScannerAgent(BaseAgent):
         data_package["investor_trend"] = investor_trend
         metadata["investor_trend"] = investor_trend
 
+        # --- Stage 2.66: Fetch insider trades ---
+        insider_trades = await dart_client.fetch_insider_trades(stock_code)
+        data_package["insider_trades"] = insider_trades
+        metadata["insider_trades"] = insider_trades[:3]
+
         # --- Stage 2.7: Hard gate check ---
         gate_passed, failed_fields = check_hard_gate(confidence_grades)
         if not gate_passed:
