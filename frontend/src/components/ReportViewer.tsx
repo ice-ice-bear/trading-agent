@@ -196,6 +196,7 @@ export default function ReportViewer() {
                       <th>Side</th>
                       <th className="text-right">Qty</th>
                       <th className="text-right">Price</th>
+                      <th className="text-right">손익</th>
                       <th>Time</th>
                     </tr>
                   </thead>
@@ -206,6 +207,11 @@ export default function ReportViewer() {
                         <td><span className={`side-badge ${t.side}`}>{t.side === 'buy' ? '매수' : '매도'}</span></td>
                         <td className="text-right">{t.quantity.toLocaleString()}</td>
                         <td className="text-right">{t.price.toLocaleString()}원</td>
+                        <td className={`text-right ${t.pnl && t.pnl >= 0 ? 'positive' : 'negative'}`}>
+                          {t.pnl !== undefined && t.pnl !== null
+                            ? `${t.pnl >= 0 ? '+' : ''}${t.pnl.toLocaleString()}원`
+                            : '-'}
+                        </td>
                         <td className="order-time">{parseUTC(t.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</td>
                       </tr>
                     ))}
@@ -223,7 +229,14 @@ export default function ReportViewer() {
                     <div key={i} className="report-signal-card">
                       <span className="report-signal-name">{s.stock_name}</span>
                       <span className={`direction-badge direction-${s.direction}`}>{s.direction.toUpperCase()}</span>
-                      {s.rr_score != null && <span className="report-signal-rr">R/R {s.rr_score.toFixed(1)}</span>}
+                      {s.rr_score != null && (
+                        <span
+                          className="report-signal-rr"
+                          style={{ color: s.rr_score >= 3 ? 'var(--color-positive, #22c55e)' : s.rr_score >= 1 ? 'var(--color-warning, #eab308)' : 'var(--color-negative, #ef4444)' }}
+                        >
+                          R/R {s.rr_score.toFixed(1)}
+                        </span>
+                      )}
                       <span className={`order-status status-${s.status}`}>{s.status}</span>
                     </div>
                   ))}
