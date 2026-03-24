@@ -34,6 +34,8 @@ export interface RiskConfig {
   max_position_weight_pct: number;
   max_daily_loss: number;
   signal_approval_mode: 'auto' | 'manual';
+  initial_capital?: number;
+  min_rr_score?: number;
 }
 
 // Dashboard types
@@ -70,6 +72,9 @@ export interface Order {
   price: number | null;
   status: 'submitted' | 'filled' | 'rejected' | 'cancelled';
   reason?: string;
+  fill_price?: number | null;
+  fill_quantity?: number | null;
+  signal_id?: number | null;
 }
 
 export interface Scenario {
@@ -212,4 +217,18 @@ export interface ReportSummary {
   trades: ReportTrade[];
   signals: ReportSignalSummary[];
   risk_events: ReportRiskEvent[];
+}
+
+export interface PerformanceData {
+  returns_pct: number;
+  max_drawdown: number;
+  trade_count: number;
+  chart_data: Array<{ timestamp: string; total_value: number; total_pnl: number; total_pnl_pct: number }>;
+}
+
+export interface PortfolioSnapshot {
+  timestamp: string;
+  total_value: number;
+  total_pnl: number;
+  total_pnl_pct: number;
 }
