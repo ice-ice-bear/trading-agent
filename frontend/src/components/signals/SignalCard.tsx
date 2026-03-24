@@ -6,6 +6,45 @@ import { FundamentalsKPI } from './FundamentalsKPI';
 import PeerComparison from './PeerComparison';
 import ValuationView from './ValuationView';
 
+interface InvestorTrend {
+  foreign_net_buy: number;
+  institution_net_buy: number;
+  foreign_holding_pct: number | null;
+  days?: number;
+}
+
+interface InsiderTrade {
+  reporter_name: string;
+  change_amount: number;
+  report_date: string;
+}
+
+interface NewsSummary {
+  headlines: string[];
+  sentiment: string;
+  summary?: string;
+}
+
+interface PeerComparisonData {
+  sector: string;
+  target?: { code: string; name: string; per: number | null; pbr: number | null };
+  peers: Array<{ code: string; name: string; per: number | null; pbr: number | null }>;
+}
+
+interface DCFValuation {
+  fair_value: number;
+  current_price: number;
+  upside_pct: number | null;
+}
+
+interface SignalMetadata {
+  investor_trend?: InvestorTrend;
+  insider_trades?: InsiderTrade[];
+  news_summary?: NewsSummary;
+  peer_comparison?: PeerComparisonData;
+  dcf_valuation?: DCFValuation;
+}
+
 interface SignalCardProps {
   signal: Signal;
   onApprove?: (id: number) => void;
@@ -143,8 +182,10 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
       )}
 
       {/* 수급 동향 */}
-      {signal.metadata && (signal.metadata as Record<string, any>).investor_trend && (() => {
-        const trend = (signal.metadata as Record<string, any>).investor_trend;
+      {(() => {
+        const meta = signal.metadata as SignalMetadata | undefined;
+        const trend = meta?.investor_trend;
+        if (!trend) return null;
         return (
           <div className="signal-section">
             <span className="section-label">수급 동향 ({trend.days || 20}일)</span>
@@ -161,14 +202,15 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
       })()}
 
       {/* 내부자 거래 */}
-      {signal.metadata && (signal.metadata as Record<string, any>).insider_trades &&
-       ((signal.metadata as Record<string, any>).insider_trades as any[]).length > 0 && (() => {
-        const trades = (signal.metadata as Record<string, any>).insider_trades as any[];
+      {(() => {
+        const meta = signal.metadata as SignalMetadata | undefined;
+        const trades = meta?.insider_trades;
+        if (!trades || trades.length === 0) return null;
         return (
           <div className="signal-section">
             <span className="section-label">내부자 거래</span>
             <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>
-              {trades.map((t: any, i: number) => (
+              {trades.map((t, i) => (
                 <div key={i} className="text-muted">
                   {t.reporter_name}: <span style={{ color: t.change_amount >= 0 ? 'var(--color-positive, #22c55e)' : 'var(--color-negative, #ef4444)' }}>
                     {t.change_amount >= 0 ? '+' : ''}{Number(t.change_amount).toLocaleString()}주
@@ -181,14 +223,15 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
       })()}
 
       {/* 뉴스 동향 */}
-      {signal.metadata && (signal.metadata as Record<string, any>).news_summary &&
-       ((signal.metadata as Record<string, any>).news_summary as any).headlines?.length > 0 && (() => {
-        const news = (signal.metadata as Record<string, any>).news_summary as any;
+      {(() => {
+        const meta = signal.metadata as SignalMetadata | undefined;
+        const news = meta?.news_summary;
+        if (!news || !news.headlines?.length) return null;
         return (
           <div className="signal-section">
             <span className="section-label">뉴스 동향 ({news.sentiment})</span>
             <ul style={{ fontSize: '0.75rem', margin: '4px 0 0 16px', padding: 0 }}>
-              {(news.headlines as string[]).slice(0, 3).map((h: string, i: number) => (
+              {news.headlines.slice(0, 3).map((h, i) => (
                 <li key={i} className="text-muted">{h}</li>
               ))}
             </ul>
@@ -197,16 +240,19 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
       })()}
 
       {/* 피어 비교 */}
-      {signal.metadata && (signal.metadata as Record<string, any>).peer_comparison &&
-       (signal.metadata as Record<string, any>).peer_comparison.sector && (() => {
-        const peerData = (signal.metadata as Record<string, any>).peer_comparison;
+      {(() => {
+        const meta = signal.metadata as SignalMetadata | undefined;
+        const peerData = meta?.peer_comparison;
+        if (!peerData?.sector) return null;
         return <PeerComparison data={peerData} />;
       })()}
 
       {/* DCF 밸류에이션 */}
-      {signal.metadata && (signal.metadata as Record<string, any>).dcf_valuation &&
-       (signal.metadata as Record<string, any>).dcf_valuation.fair_value && (() => {
-        return <ValuationView dcf={(signal.metadata as Record<string, any>).dcf_valuation} />;
+      {(() => {
+        const meta = signal.metadata as SignalMetadata | undefined;
+        const dcf = meta?.dcf_valuation;
+        if (!dcf?.fair_value) return null;
+        return <ValuationView dcf={dcf} />;
       })()}
 
       {/* DART KPI tiles */}
