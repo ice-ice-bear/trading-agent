@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+from datetime import datetime, timedelta
 from typing import Any
 
 from app.models.db import execute_insert, execute_query
@@ -244,6 +245,36 @@ def parse_ohlcv_from_chart(chart_data: list[dict]) -> dict[str, list[float]]:
         except (ValueError, TypeError):
             continue
     return {"closes": closes, "highs": highs, "lows": lows, "volumes": volumes}
+
+
+async def get_investor_trend(stock_code: str, days: int = 20) -> dict[str, Any]:
+    """외국인/기관 매매동향 조회 (KIS MCP domestic_stock)"""
+    try:
+        raw = await mcp_manager.call_tool("domestic_stock", {
+            "api_type": "inquire_investor",
+            "params": {
+                "fid_input_iscd": stock_code,
+                "fid_input_date_1": (datetime.now() - timedelta(days=days)).strftime("%Y%m%d"),
+                "fid_input_date_2": datetime.now().strftime("%Y%m%d"),
+            },
+        })
+        data = _unwrap_mcp_response(raw)
+        if not data:
+            return {"foreign_net_buy": 0, "institution_net_buy": 0, "foreign_holding_pct": None}
+
+        items = data if isinstance(data, list) else data.get("output", []) if isinstance(data, dict) else []
+        foreign_total = sum(int(item.get("frgn_ntby_qty", 0)) for item in items if isinstance(item, dict))
+        inst_total = sum(int(item.get("orgn_ntby_qty", 0)) for item in items if isinstance(item, dict))
+
+        return {
+            "foreign_net_buy": foreign_total,
+            "institution_net_buy": inst_total,
+            "foreign_holding_pct": None,
+            "days": days,
+        }
+    except Exception as e:
+        logger.warning(f"Investor trend fetch failed for {stock_code}: {e}")
+        return {"foreign_net_buy": 0, "institution_net_buy": 0, "foreign_holding_pct": None}
 
 
 def _parse_list_response(raw: Any, limit: int = 20) -> list[dict]:

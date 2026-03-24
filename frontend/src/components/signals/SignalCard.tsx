@@ -140,6 +140,24 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
         </div>
       )}
 
+      {/* 수급 동향 */}
+      {signal.metadata && (signal.metadata as Record<string, any>).investor_trend && (() => {
+        const trend = (signal.metadata as Record<string, any>).investor_trend;
+        return (
+          <div className="signal-section">
+            <span className="section-label">수급 동향 ({trend.days || 20}일)</span>
+            <div style={{ display: 'flex', gap: '16px', fontSize: '0.8rem', marginTop: '4px' }}>
+              <span style={{ color: trend.foreign_net_buy >= 0 ? 'var(--color-positive, #22c55e)' : 'var(--color-negative, #ef4444)' }}>
+                외국인 {trend.foreign_net_buy >= 0 ? '+' : ''}{Number(trend.foreign_net_buy).toLocaleString()}주
+              </span>
+              <span style={{ color: trend.institution_net_buy >= 0 ? 'var(--color-positive, #22c55e)' : 'var(--color-negative, #ef4444)' }}>
+                기관 {trend.institution_net_buy >= 0 ? '+' : ''}{Number(trend.institution_net_buy).toLocaleString()}주
+              </span>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* DART KPI tiles */}
       {dart_fundamentals && confidence_grades && (
         <FundamentalsKPI

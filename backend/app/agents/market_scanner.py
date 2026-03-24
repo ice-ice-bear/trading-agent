@@ -199,6 +199,12 @@ class MarketScannerAgent(BaseAgent):
         dart_financials = dart_result.get("financials")
         confidence_grades.update(dart_result.get("confidence_grades", {}))
 
+        # --- Stage 2.65: Fetch foreign/institutional trend ---
+        from app.services.market_service import get_investor_trend
+        investor_trend = await get_investor_trend(stock_code)
+        data_package["investor_trend"] = investor_trend
+        metadata["investor_trend"] = investor_trend
+
         # --- Stage 2.7: Hard gate check ---
         gate_passed, failed_fields = check_hard_gate(confidence_grades)
         if not gate_passed:

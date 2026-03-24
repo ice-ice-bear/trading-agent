@@ -113,6 +113,7 @@ export interface Signal {
   expert_stances?: Record<string, string>;
   critic_result?: string;
   dart_fundamentals?: DartFundamentals;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Agent {
