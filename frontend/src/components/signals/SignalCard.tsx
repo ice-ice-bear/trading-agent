@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import type { Signal } from '../../types';
 import { ScenarioChart } from './ScenarioChart';
 import { FundamentalsKPI } from './FundamentalsKPI';
+import PeerComparison from './PeerComparison';
 
 interface SignalCardProps {
   signal: Signal;
@@ -192,6 +193,13 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
             </ul>
           </div>
         );
+      })()}
+
+      {/* 피어 비교 */}
+      {signal.metadata && (signal.metadata as Record<string, any>).peer_comparison &&
+       (signal.metadata as Record<string, any>).peer_comparison.sector && (() => {
+        const peerData = (signal.metadata as Record<string, any>).peer_comparison;
+        return <PeerComparison data={peerData} />;
       })()}
 
       {/* DART KPI tiles */}

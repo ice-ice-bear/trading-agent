@@ -311,6 +311,12 @@ export async function runTaskNow(taskId: number): Promise<{ task_id: number; age
 
 // --- Calendar API ---
 
+export async function getPeerComparison(stockCode: string): Promise<Record<string, unknown>> {
+  const res = await fetch(`/api/peers/${stockCode}`);
+  if (!res.ok) throw new Error('Failed to fetch peer comparison');
+  return res.json();
+}
+
 export async function getCatalystEvents(stockCode?: string, days: number = 30): Promise<{ events: Array<{ stock_code: string | null; event_type: string; event_date: string; description: string; source: string }> }> {
   const params = new URLSearchParams();
   if (stockCode) params.set('stock_code', stockCode);

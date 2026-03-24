@@ -224,6 +224,15 @@ class MarketScannerAgent(BaseAgent):
         if not expert_analyses:
             return None
 
+        # Fetch peer comparison data
+        from app.services.peer_service import get_sector_peers
+        peer_data = await get_sector_peers(stock_code, max_peers=3)
+        data_package["peer_comparison"] = peer_data
+        metadata["peer_comparison"] = {
+            "sector": peer_data.get("sector"),
+            "peers": [{"code": p["code"], "name": p["name"], "per": p.get("per"), "pbr": p.get("pbr")} for p in peer_data.get("peers", [])[:3]],
+        }
+
         metadata["news_summary"] = data_package.get("news_summary", {})
 
         # --- Stage 4: Chief Analyst debate ---
