@@ -58,6 +58,17 @@ export default function ScheduleManager() {
     }
   };
 
+  // cron 시간순 정렬: 시(hour) → 분(minute) 기준
+  const sortedTasks = [...tasks].sort((a, b) => {
+    const parseCron = (cron: string) => {
+      const parts = cron.split(/\s+/);
+      const min = parts[0] === '*' ? 0 : parseInt(parts[0]?.replace('*/', '') || '0', 10);
+      const hour = parts[1] === '*' ? 0 : parseInt(parts[1]?.split('-')[0]?.replace('*/', '') || '0', 10);
+      return hour * 60 + min;
+    };
+    return parseCron(a.cron_expression) - parseCron(b.cron_expression);
+  });
+
   return (
     <div className="schedule-manager">
       <h4>스케줄 관리</h4>
@@ -73,7 +84,7 @@ export default function ScheduleManager() {
           </tr>
         </thead>
         <tbody>
-          {tasks.map((task) => {
+          {sortedTasks.map((task) => {
             const agent = AGENT_LABELS[task.agent_id] || { name: task.agent_id, icon: '⚙️' };
             const taskLabel = TASK_LABELS[task.name] || task.name;
             return (
