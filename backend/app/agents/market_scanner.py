@@ -242,6 +242,8 @@ class MarketScannerAgent(BaseAgent):
                 "fair_value": dcf_result["fair_value"],
                 "current_price": current_price,
                 "upside_pct": round((dcf_result["fair_value"] - current_price) / current_price * 100, 1) if current_price else None,
+                "sensitivity": dcf_result.get("sensitivity"),
+                "assumptions": dcf_result.get("assumptions"),
             }
 
         metadata["news_summary"] = data_package.get("news_summary", {})

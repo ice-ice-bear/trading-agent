@@ -35,6 +35,8 @@ interface DCFValuation {
   fair_value: number;
   current_price: number;
   upside_pct: number | null;
+  sensitivity?: (number | null)[][];
+  assumptions?: { wacc: number; growth_rate: number; terminal_growth: number };
 }
 
 interface SignalMetadata {
