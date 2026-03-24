@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import type { Signal } from '../../types';
 import { getSignals, approveSignal, rejectSignal } from '../../services/api';
 import { SignalCard } from '../signals/SignalCard';
+import SignalDetailModal from '../signals/SignalDetailModal';
 import { parseUTC } from '../../utils/time';
 
 interface Props {
@@ -34,6 +35,7 @@ export default function SignalPanel({ refreshTrigger }: Props) {
   const [signals, setSignals] = useState<Signal[]>([]);
   const [acting, setActing] = useState<number | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [selectedSignalId, setSelectedSignalId] = useState<number | null>(null);
 
   const fetchSignals = useCallback(() => {
     getSignals(undefined, 50)
@@ -155,13 +157,14 @@ export default function SignalPanel({ refreshTrigger }: Props) {
               {!isCollapsed && (
                 <div className="signal-date-body">
                   {group.signals.map((sig) => (
-                    <SignalCard
-                      key={sig.id}
-                      signal={sig}
-                      onApprove={sig.status === 'pending' ? handleApprove : undefined}
-                      onReject={sig.status === 'pending' ? handleReject : undefined}
-                      acting={acting === sig.id}
-                    />
+                    <div key={sig.id} onClick={() => setSelectedSignalId(sig.id)} style={{ cursor: 'pointer' }}>
+                      <SignalCard
+                        signal={sig}
+                        onApprove={sig.status === 'pending' ? handleApprove : undefined}
+                        onReject={sig.status === 'pending' ? handleReject : undefined}
+                        acting={acting === sig.id}
+                      />
+                    </div>
                   ))}
                 </div>
               )}
@@ -169,6 +172,12 @@ export default function SignalPanel({ refreshTrigger }: Props) {
           );
         })}
       </div>
+      {selectedSignalId && (
+        <SignalDetailModal
+          signalId={selectedSignalId}
+          onClose={() => setSelectedSignalId(null)}
+        />
+      )}
     </div>
   );
 }
