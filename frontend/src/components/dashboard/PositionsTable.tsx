@@ -26,6 +26,7 @@ export default function PositionsTable({ positions }: Props) {
               <th className="num">Qty</th>
               <th className="num">Avg Price</th>
               <th className="num">Current</th>
+              <th className="num">시장가치</th>
               <th className="num">P/L</th>
               <th className="num">P/L %</th>
             </tr>
@@ -38,6 +39,7 @@ export default function PositionsTable({ positions }: Props) {
                 <td className="num">{pos.quantity.toLocaleString()}</td>
                 <td className="num">{pos.avg_buy_price.toLocaleString()}</td>
                 <td className="num">{pos.current_price.toLocaleString()}</td>
+                <td className="num">{(pos.market_value || pos.current_price * pos.quantity).toLocaleString()}</td>
                 <td className={`num ${pos.unrealized_pnl >= 0 ? 'positive' : 'negative'}`}>
                   {pos.unrealized_pnl.toLocaleString()}
                 </td>
