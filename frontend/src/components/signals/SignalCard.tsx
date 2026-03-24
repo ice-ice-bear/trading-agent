@@ -18,7 +18,7 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
   const [expandedExperts, setExpandedExperts] = useState(false);
   const {
     stock_name, stock_code, direction, rr_score, scenarios,
-    variant_view, expert_stances, critic_result,
+    variant_view, critic_result,
     confidence_grades, dart_fundamentals,
   } = signal;
 

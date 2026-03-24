@@ -24,6 +24,7 @@ export default function DashboardView() {
   const [orderTrigger, setOrderTrigger] = useState(0);
   const [portfolioTrigger, setPortfolioTrigger] = useState(0);
   const [agentTrigger, setAgentTrigger] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [reportTrigger, setReportTrigger] = useState(0);
 
   const fetchCoreData = useCallback(async () => {
