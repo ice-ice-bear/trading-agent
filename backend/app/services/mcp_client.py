@@ -70,6 +70,18 @@ class MCPClientManager:
         """Return tools formatted for Claude API."""
         return self._tools
 
+    async def _reconnect(self) -> bool:
+        """Attempt to reconnect to MCP server."""
+        logger.info("Attempting MCP server reconnection...")
+        try:
+            await self.disconnect()
+            await self.connect()
+            logger.info("MCP server reconnection successful")
+            return True
+        except Exception as e:
+            logger.error(f"MCP server reconnection failed: {e}")
+            return False
+
     async def call_tool(self, name: str, arguments: dict[str, Any]) -> str:
         """Execute an MCP tool and return the result as a string."""
         if not self._client or not self._connected:
@@ -105,8 +117,31 @@ class MCPClientManager:
                 return "\n".join(parts)
             return str(result)
         except Exception as e:
-            logger.error(f"MCP tool call failed: {name}: {e}")
-            return f"Error calling tool {name}: {e}"
+            error_msg = str(e) or type(e).__name__
+            logger.error(f"MCP tool call failed: {name}: {error_msg}")
+
+            # Attempt reconnection on connection-related failures
+            if await self._reconnect():
+                try:
+                    logger.info(f"Retrying MCP tool: {name} after reconnection")
+                    result = await self._client.call_tool(name, arguments)
+                    if hasattr(result, "content"):
+                        parts = []
+                        for item in result.content:
+                            parts.append(item.text if hasattr(item, "text") else str(item))
+                        return "\n".join(parts)
+                    if isinstance(result, list):
+                        parts = []
+                        for item in result:
+                            parts.append(item.text if hasattr(item, "text") else str(item))
+                        return "\n".join(parts)
+                    return str(result)
+                except Exception as retry_err:
+                    retry_msg = str(retry_err) or type(retry_err).__name__
+                    logger.error(f"MCP tool retry also failed: {name}: {retry_msg}")
+                    return f"Error calling tool {name}: {retry_msg}"
+
+            return f"Error calling tool {name}: {error_msg}"
 
 
 # Singleton instance
