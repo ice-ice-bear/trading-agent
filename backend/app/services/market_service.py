@@ -173,31 +173,36 @@ async def get_kospi200_components() -> list[str]:
         return [row["stock_code"] for row in fallback] if fallback else []
 
     # DB에 upsert
-    for code, name in codes_names.items():
+    for code, info in codes_names.items():
+        name = info["name"] if isinstance(info, dict) else info
+        sector = info.get("sector") if isinstance(info, dict) else None
         await execute_insert(
-            """INSERT OR REPLACE INTO kospi200_components (stock_code, stock_name, updated_at)
-               VALUES (?, ?, datetime('now'))""",
-            (code, name),
+            """INSERT OR REPLACE INTO kospi200_components (stock_code, stock_name, sector, updated_at)
+               VALUES (?, ?, ?, datetime('now'))""",
+            (code, name, sector),
         )
 
     logger.info(f"KOSPI200 구성종목 {len(codes_names)}개 NAVER Finance에서 갱신")
     return list(codes_names.keys())
 
 
-def _fetch_kospi200_via_naver() -> dict[str, str]:
-    """NAVER Finance에서 KOSPI200 구성종목 코드·종목명 반환 (동기 함수).
+def _fetch_kospi200_via_naver() -> dict[str, dict[str, str]]:
+    """NAVER Finance에서 KOSPI200 구성종목 코드·종목명·업종 반환 (동기 함수).
 
     NAVER Finance는 별도 인증 없이 접근 가능하며 항상 최신 구성 정보를 제공한다.
     Returns:
-        {종목코드: 종목명} dict
+        {종목코드: {"name": 종목명, "sector": 업종명 or None}} dict
     """
     import re
+    import time
+
     import requests
 
     session = requests.Session()
     session.headers["User-Agent"] = "Mozilla/5.0"
     session.get("https://finance.naver.com/")
 
+    # Step 1: Collect all stock codes and names
     codes: dict[str, str] = {}
     for page in range(1, 25):
         resp = session.get(
@@ -211,7 +216,29 @@ def _fetch_kospi200_via_naver() -> dict[str, str]:
         for code, name in pairs:
             codes[code] = name.strip()
 
-    return codes
+    # Step 2: Fetch sector info for each stock
+    result: dict[str, dict[str, str]] = {}
+    total = len(codes)
+    for idx, (code, name) in enumerate(codes.items(), 1):
+        sector = None
+        try:
+            resp = session.get(
+                f"https://finance.naver.com/item/main.naver?code={code}",
+                timeout=10,
+            )
+            match = re.search(r'업종명\s*:\s*<a[^>]*>([^<]+)</a>', resp.text)
+            sector = match.group(1).strip() if match else None
+        except Exception as e:
+            logger.debug(f"섹터 조회 실패 ({code} {name}): {e}")
+
+        result[code] = {"name": name, "sector": sector}
+
+        if idx % 50 == 0:
+            logger.info(f"KOSPI200 섹터 수집 진행: {idx}/{total}")
+
+        time.sleep(0.1)
+
+    return result
 
 
 async def get_batch_charts(
