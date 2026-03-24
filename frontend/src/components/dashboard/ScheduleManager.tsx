@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getTasks, updateTask, runTaskNow } from '../../services/api';
-import { ScheduledTask } from '../../types';
+import type { ScheduledTask } from '../../types';
 
 export default function ScheduleManager() {
   const [tasks, setTasks] = useState<ScheduledTask[]>([]);
