@@ -157,6 +157,100 @@ CREATE TABLE IF NOT EXISTS agent_events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_agent_events_timestamp ON agent_events(timestamp);
+
+-- Phase 1: Data Collection
+CREATE TABLE IF NOT EXISTS foreign_ownership_cache (
+    stock_code TEXT NOT NULL,
+    trade_date TEXT NOT NULL,
+    foreign_net_buy INTEGER DEFAULT 0,
+    institution_net_buy INTEGER DEFAULT 0,
+    foreign_holding_pct REAL,
+    cached_at TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (stock_code, trade_date)
+);
+
+CREATE TABLE IF NOT EXISTS insider_trades (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    stock_code TEXT NOT NULL,
+    corp_code TEXT,
+    report_date TEXT,
+    reporter_name TEXT,
+    position TEXT,
+    change_type TEXT,
+    shares_before INTEGER,
+    shares_after INTEGER,
+    change_amount INTEGER,
+    cached_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_insider_stock ON insider_trades(stock_code);
+
+CREATE TABLE IF NOT EXISTS catalyst_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    stock_code TEXT,
+    event_type TEXT NOT NULL,
+    event_date TEXT NOT NULL,
+    description TEXT,
+    source TEXT DEFAULT 'dart',
+    impact TEXT DEFAULT 'neutral',
+    cached_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_catalyst_date ON catalyst_events(event_date);
+CREATE INDEX IF NOT EXISTS idx_catalyst_stock ON catalyst_events(stock_code);
+
+-- Phase 2: Analysis
+CREATE TABLE IF NOT EXISTS news_cache (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    stock_code TEXT,
+    title TEXT,
+    summary TEXT,
+    sentiment TEXT,
+    source_url TEXT,
+    published_at TEXT,
+    cached_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_news_stock ON news_cache(stock_code);
+
+CREATE TABLE IF NOT EXISTS signal_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    stock_code TEXT NOT NULL,
+    snapshot_date TEXT DEFAULT (date('now')),
+    signal_id INTEGER REFERENCES signals(id),
+    direction TEXT,
+    rr_score REAL,
+    scenarios_json TEXT,
+    expert_stances_json TEXT,
+    variant_view TEXT,
+    dart_fundamentals_json TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_snapshot_stock ON signal_snapshots(stock_code);
+
+-- Phase 3: Advanced Analysis
+CREATE TABLE IF NOT EXISTS valuation_cache (
+    stock_code TEXT NOT NULL,
+    cache_date TEXT NOT NULL,
+    dcf_result_json TEXT,
+    assumptions_json TEXT,
+    PRIMARY KEY (stock_code, cache_date)
+);
+
+CREATE TABLE IF NOT EXISTS portfolio_risk_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    snapshot_date TEXT DEFAULT (datetime('now')),
+    var_95 REAL,
+    var_99 REAL,
+    portfolio_beta REAL,
+    sector_breakdown_json TEXT,
+    correlation_matrix_json TEXT
+);
+
+-- Phase 4: Exports
+CREATE TABLE IF NOT EXISTS memo_exports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    signal_id INTEGER REFERENCES signals(id),
+    format TEXT DEFAULT 'html',
+    file_path TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+);
 """
 
 # Default risk configuration values

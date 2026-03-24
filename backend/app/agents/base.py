@@ -19,6 +19,7 @@ class AgentRole(str, Enum):
     EXECUTOR = "executor"
     RISK = "risk"
     REPORTER = "reporter"
+    ANALYST = "analyst"
 
 
 class AgentStatus(str, Enum):

@@ -180,6 +180,8 @@ class MarketScannerAgent(BaseAgent):
         indicators = stock_data.get("indicators", {})
         current_price = stock_data.get("current_price", 0)
 
+        metadata = {}
+
         data_package = {
             "stock": stock_info,
             "technicals": indicators,
@@ -278,8 +280,8 @@ class MarketScannerAgent(BaseAgent):
             """INSERT INTO signals
                (agent_id, stock_code, stock_name, direction, confidence, reason, status,
                 scenarios_json, variant_view, rr_score, current_price, expert_stances_json,
-                dart_fundamentals_json, critic_result, confidence_grades_json)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                dart_fundamentals_json, metadata_json, critic_result, confidence_grades_json)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 self.agent_id,
                 stock_code,
@@ -298,6 +300,7 @@ class MarketScannerAgent(BaseAgent):
                 current_price,
                 json.dumps(signal_analysis.expert_stances),
                 json.dumps(dart_financials) if dart_financials else None,
+                json.dumps(metadata, ensure_ascii=False),
                 "pass",
                 json.dumps(confidence_grades),
             ),
