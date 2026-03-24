@@ -116,3 +116,135 @@ async def generate_memo_html(signal_id: int) -> str | None:
         pass
 
     return html
+
+
+async def generate_memo_docx(signal_id: int) -> bytes | None:
+    """시그널 데이터 기반 DOCX 투자 메모 생성"""
+    from docx import Document
+    from docx.shared import Pt, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from io import BytesIO
+
+    rows = await execute_query("SELECT * FROM signals WHERE id = ?", (signal_id,))
+    if not rows:
+        return None
+
+    signal = dict(rows[0])
+    scenarios = json.loads(signal.get("scenarios_json") or "{}")
+    dart = json.loads(signal.get("dart_fundamentals_json") or "{}")
+    expert_stances = json.loads(signal.get("expert_stances_json") or "{}")
+    metadata = json.loads(signal.get("metadata_json") or "{}")
+    direction_kr = {"buy": "매수", "sell": "매도", "hold": "보유"}.get(signal.get("direction", ""), signal.get("direction", ""))
+    rr_score = signal.get("rr_score", 0) or 0
+
+    doc = Document()
+
+    # Title
+    title = doc.add_heading(f'{signal.get("stock_name", "")} ({signal.get("stock_code", "")})', level=0)
+    title.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+    # Meta
+    meta = doc.add_paragraph()
+    meta.add_run(f'생성일: {datetime.now().strftime("%Y-%m-%d %H:%M")} | 시그널 #{signal_id} | R/R Score: {rr_score:.1f}').font.size = Pt(9)
+    meta.runs[0].font.color.rgb = RGBColor(0x66, 0x66, 0x66)
+
+    # Investment Opinion
+    doc.add_heading('투자 의견', level=1)
+    p = doc.add_paragraph()
+    run = p.add_run(direction_kr)
+    run.bold = True
+    run.font.size = Pt(14)
+    if signal.get("direction") == "buy":
+        run.font.color.rgb = RGBColor(0x22, 0xC5, 0x5E)
+    elif signal.get("direction") == "sell":
+        run.font.color.rgb = RGBColor(0xEF, 0x44, 0x44)
+
+    if signal.get("variant_view"):
+        doc.add_paragraph(f'시장 오해: {signal["variant_view"]}')
+
+    # Scenarios
+    if scenarios:
+        doc.add_heading('시나리오 분석', level=1)
+        table = doc.add_table(rows=1, cols=4)
+        table.style = 'Table Grid'
+        hdr = table.rows[0].cells
+        hdr[0].text = '시나리오'
+        hdr[1].text = '목표가'
+        hdr[2].text = '상승률'
+        hdr[3].text = '확률'
+        for key in ["bull", "base", "bear"]:
+            s = scenarios.get(key, {})
+            if s:
+                row = table.add_row().cells
+                row[0].text = s.get("label", key)
+                row[1].text = f'{s.get("price_target", 0):,.0f}원'
+                row[2].text = f'{s.get("upside_pct", 0):+.1f}%'
+                row[3].text = f'{s.get("probability", 0) * 100:.0f}%'
+
+    # DART Fundamentals
+    if dart:
+        doc.add_heading('펀더멘탈 (DART)', level=1)
+        labels = {
+            "dart_per": "PER", "dart_pbr": "PBR", "dart_operating_margin": "영업이익률 (%)",
+            "dart_debt_ratio": "부채비율 (%)", "dart_eps_yoy_pct": "EPS 성장률 (%)",
+            "dart_dividend_yield": "배당수익률 (%)",
+        }
+        table = doc.add_table(rows=1, cols=2)
+        table.style = 'Table Grid'
+        table.rows[0].cells[0].text = '지표'
+        table.rows[0].cells[1].text = '값'
+        for key, label in labels.items():
+            val = dart.get(key)
+            if val is not None:
+                row = table.add_row().cells
+                row[0].text = label
+                row[1].text = f"{val:.1f}" if isinstance(val, (int, float)) else str(val)
+
+    # Expert Panel
+    if expert_stances:
+        doc.add_heading('전문가 패널', level=1)
+        table = doc.add_table(rows=1, cols=2)
+        table.style = 'Table Grid'
+        table.rows[0].cells[0].text = '전문가'
+        table.rows[0].cells[1].text = '의견'
+        for name, stance in expert_stances.items():
+            row = table.add_row().cells
+            row[0].text = name
+            row[1].text = stance
+
+    # DCF
+    dcf = metadata.get("dcf_valuation")
+    if dcf and dcf.get("fair_value"):
+        doc.add_heading('DCF 적정가', level=1)
+        upside_text = f' ({dcf["upside_pct"]:+.1f}%)' if dcf.get("upside_pct") is not None else ''
+        doc.add_paragraph(f'적정가: {dcf["fair_value"]:,.0f}원{upside_text}')
+
+    # Investor trend
+    investor = metadata.get("investor_trend")
+    if investor:
+        doc.add_heading(f'수급 동향 ({investor.get("days", 20)}일)', level=1)
+        doc.add_paragraph(f'외국인 순매수: {investor.get("foreign_net_buy", 0):+,}주')
+        doc.add_paragraph(f'기관 순매수: {investor.get("institution_net_buy", 0):+,}주')
+
+    # Disclaimer
+    doc.add_paragraph('')
+    disclaimer = doc.add_paragraph()
+    run = disclaimer.add_run('본 메모는 AI 분석 시스템에 의해 자동 생성되었습니다. 투자 판단의 참고 자료로만 활용하세요.')
+    run.font.size = Pt(8)
+    run.font.color.rgb = RGBColor(0x99, 0x99, 0x99)
+
+    # Save to bytes
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+
+    # DB record
+    try:
+        await execute_insert(
+            "INSERT INTO memo_exports (signal_id, format, file_path) VALUES (?, 'docx', ?)",
+            (signal_id, f"memo_{signal_id}_{datetime.now().strftime('%Y%m%d')}.docx")
+        )
+    except Exception:
+        pass
+
+    return buffer.getvalue()

@@ -46,6 +46,15 @@ export default function SignalDetailModal({ signalId, onClose }: Props) {
           <h3>시그널 상세 #{signal.id}</h3>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <a
+              href={`/api/memos/${signal.id}/docx`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-sm btn-ghost"
+              style={{ marginRight: '8px' }}
+            >
+              DOCX
+            </a>
+            <a
               href={`/api/memos/${signal.id}/html`}
               target="_blank"
               rel="noopener noreferrer"
