@@ -233,6 +233,17 @@ class MarketScannerAgent(BaseAgent):
             "peers": [{"code": p["code"], "name": p["name"], "per": p.get("per"), "pbr": p.get("pbr")} for p in peer_data.get("peers", [])[:3]],
         }
 
+        # DCF valuation
+        from app.services.valuation_service import get_or_compute_dcf
+        dcf_result = await get_or_compute_dcf(stock_code, dart_client)
+        if dcf_result and dcf_result.get("fair_value"):
+            data_package["dcf_valuation"] = dcf_result
+            metadata["dcf_valuation"] = {
+                "fair_value": dcf_result["fair_value"],
+                "current_price": current_price,
+                "upside_pct": round((dcf_result["fair_value"] - current_price) / current_price * 100, 1) if current_price else None,
+            }
+
         metadata["news_summary"] = data_package.get("news_summary", {})
 
         # --- Stage 4: Chief Analyst debate ---

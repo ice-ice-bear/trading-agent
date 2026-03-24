@@ -325,6 +325,63 @@ class DartClient:
             return None
         return None
 
+    async def fetch_cash_flow(self, stock_code: str) -> dict | None:
+        """DART 현금흐름표 조회"""
+        if not self.enabled:
+            return None
+        corp_code = await self._get_corp_code(stock_code)
+        if not corp_code:
+            return None
+
+        year = str(datetime.now().year - 1)
+        try:
+            params = {
+                "crtfc_key": self._api_key,
+                "corp_code": corp_code,
+                "bsns_year": year,
+                "reprt_code": "11011",
+                "fs_div": "CFS",
+            }
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    "https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json",
+                    params=params,
+                    timeout=15,
+                )
+                data = resp.json()
+
+            if data.get("status") != "000":
+                return None
+
+            items = {}
+            for item in data.get("list", []):
+                nm = item.get("account_nm", "")
+                if nm not in items:
+                    items[nm] = item
+
+            def parse_amt(name):
+                item = items.get(name)
+                if not item:
+                    return None
+                val = item.get("thstrm_amount", "").replace(",", "")
+                try:
+                    return float(val)
+                except (ValueError, TypeError):
+                    return None
+
+            op_cf = parse_amt("영업활동현금흐름") or parse_amt("영업활동으로인한현금흐름")
+            capex = abs(parse_amt("유형자산의 취득") or parse_amt("유형자산취득") or 0)
+
+            return {
+                "operating_cash_flow": op_cf,
+                "capex": capex,
+                "free_cash_flow": (op_cf - capex) if op_cf else None,
+                "year": year,
+            }
+        except Exception as e:
+            logger.warning(f"Cash flow fetch failed for {stock_code}: {e}")
+            return None
+
     async def fetch_insider_trades(self, stock_code: str, limit: int = 5) -> list[dict]:
         """DART 임원 주요주주 특정증권등 소유상황 보고서 조회"""
         if not self.enabled:

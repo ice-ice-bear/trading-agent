@@ -4,6 +4,7 @@ import type { Signal } from '../../types';
 import { ScenarioChart } from './ScenarioChart';
 import { FundamentalsKPI } from './FundamentalsKPI';
 import PeerComparison from './PeerComparison';
+import ValuationView from './ValuationView';
 
 interface SignalCardProps {
   signal: Signal;
@@ -200,6 +201,12 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
        (signal.metadata as Record<string, any>).peer_comparison.sector && (() => {
         const peerData = (signal.metadata as Record<string, any>).peer_comparison;
         return <PeerComparison data={peerData} />;
+      })()}
+
+      {/* DCF 밸류에이션 */}
+      {signal.metadata && (signal.metadata as Record<string, any>).dcf_valuation &&
+       (signal.metadata as Record<string, any>).dcf_valuation.fair_value && (() => {
+        return <ValuationView dcf={(signal.metadata as Record<string, any>).dcf_valuation} />;
       })()}
 
       {/* DART KPI tiles */}
