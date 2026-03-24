@@ -3,6 +3,7 @@ import type { Agent, AgentLog, AgentEvent, ScheduledTask } from '../types';
 import { getAgents, getAgentLogs, getAgentEvents, getTasks, runAgent, enableAgent, disableAgent } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { parseUTC } from '../utils/time';
+import ScheduleManager from './dashboard/ScheduleManager';
 import './AgentWorkflow.css';
 
 
@@ -476,6 +477,9 @@ export default function AgentWorkflow() {
 
       {/* Section 3: Event Timeline */}
       <EventTimeline events={agentEvents} agents={agents} />
+
+      {/* Section 4: Schedule Manager */}
+      <ScheduleManager />
     </div>
   );
 }
