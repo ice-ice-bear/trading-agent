@@ -66,7 +66,7 @@ export default function SignalDetailModal({ signalId, onClose }: Props) {
           </div>
         </div>
 
-        <SignalCard signal={signal} />
+        <SignalCard signal={signal} defaultExpanded={true} />
 
         {relatedOrders.length > 0 && (
           <div style={{ marginTop: '16px' }}>

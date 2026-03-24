@@ -52,12 +52,14 @@ interface SignalCardProps {
   onApprove?: (id: number) => void;
   onReject?: (id: number) => void;
   acting?: boolean;
+  defaultExpanded?: boolean;
 }
 
 const directionColor = (d: string) =>
   d === 'buy' ? '#28a745' : d === 'sell' ? '#dc3545' : '#6c757d';
 
-export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onReject, acting }) => {
+export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onReject, acting, defaultExpanded }) => {
+  const [expanded, setExpanded] = useState(defaultExpanded ?? false);
   const [expandedExperts, setExpandedExperts] = useState(false);
   const {
     stock_name, stock_code, direction, rr_score, scenarios,
@@ -142,6 +144,15 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
         </div>
       )}
 
+      {/* Expand/collapse toggle */}
+      <div
+        style={{ textAlign: 'center', padding: '4px 0', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--color-muted, #6b7280)' }}
+        onClick={() => setExpanded(!expanded)}
+      >
+        {expanded ? '▲ 간략히 보기' : '▼ 상세 보기'}
+      </div>
+
+      {expanded && (<>
       {/* Risk notes */}
       {signal.risk_notes && (
         <div className="signal-section">
@@ -264,6 +275,7 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
           confidenceGrades={confidence_grades}
         />
       )}
+      </>)}
 
       {/* Footer: critic + approve/reject */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
