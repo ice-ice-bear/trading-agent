@@ -6,6 +6,7 @@ interface RiskData {
   portfolio_beta: number;
   sector_breakdown: Record<string, number>;
   total_value: number;
+  correlation?: { codes: string[]; matrix: number[][] };
 }
 
 export default function RiskDashboard() {
@@ -49,6 +50,40 @@ export default function RiskDashboard() {
                   <span style={{ color: pct > 40 ? 'var(--color-negative, #ef4444)' : undefined }}>{pct.toFixed(1)}%</span>
                 </div>
               ))}
+          </div>
+        )}
+        {risk.correlation && risk.correlation.matrix.length > 0 && (
+          <div style={{ marginTop: '12px' }}>
+            <span className="text-muted" style={{ fontSize: '0.8rem' }}>종목 상관관계</span>
+            <table style={{ width: '100%', fontSize: '0.65rem', marginTop: '4px', borderCollapse: 'collapse', textAlign: 'center' }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: '2px', textAlign: 'left' }}></th>
+                  {risk.correlation.codes.map(c => (
+                    <th key={c} style={{ padding: '2px', fontWeight: 400 }}>{c.slice(-4)}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {risk.correlation.matrix.map((row, i) => (
+                  <tr key={i}>
+                    <td style={{ textAlign: 'left', fontWeight: 600, padding: '2px' }}>{risk.correlation!.codes[i].slice(-4)}</td>
+                    {row.map((val, j) => {
+                      const absVal = Math.abs(val);
+                      const bg = i === j ? 'transparent'
+                        : val > 0.5 ? `rgba(239, 68, 68, ${absVal * 0.4})`
+                        : val < -0.3 ? `rgba(34, 197, 94, ${absVal * 0.4})`
+                        : 'transparent';
+                      return (
+                        <td key={j} style={{ padding: '2px', background: bg, borderRadius: '2px' }}>
+                          {i === j ? '-' : val.toFixed(2)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

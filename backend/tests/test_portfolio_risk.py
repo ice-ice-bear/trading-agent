@@ -2,6 +2,8 @@
 import pytest
 from app.services.portfolio_risk_service import (
     calculate_historical_var,
+    calculate_beta,
+    compute_correlation_matrix,
     _compute_returns,
 )
 
@@ -44,3 +46,27 @@ def test_var_99_higher_than_95():
     var_95 = calculate_historical_var(returns, 0.95)
     var_99 = calculate_historical_var(returns, 0.99)
     assert var_99 >= var_95
+
+
+def test_beta_perfect_correlation():
+    """완벽한 상관관계 시 베타 = 1"""
+    returns = [0.01, -0.02, 0.015, -0.005, 0.03, -0.01, 0.02, -0.015, 0.01, 0.005]
+    beta = calculate_beta(returns, returns)
+    assert abs(beta - 1.0) < 0.01
+
+
+def test_beta_insufficient_data():
+    """데이터 부족 시 기본값 1.0"""
+    assert calculate_beta([0.01], [0.01]) == 1.0
+
+
+def test_correlation_matrix_diagonal():
+    """대각선은 모두 1.0"""
+    returns_map = {
+        "A": [0.01, -0.02, 0.015, -0.005, 0.03, -0.01, 0.02, -0.015, 0.01, 0.005],
+        "B": [0.02, -0.01, 0.01, -0.01, 0.02, -0.02, 0.015, -0.01, 0.005, 0.01],
+    }
+    result = compute_correlation_matrix(returns_map)
+    assert len(result["matrix"]) == 2
+    assert result["matrix"][0][0] == 1.0
+    assert result["matrix"][1][1] == 1.0
