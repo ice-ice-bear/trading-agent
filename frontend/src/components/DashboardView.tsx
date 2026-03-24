@@ -24,6 +24,7 @@ export default function DashboardView() {
   const [orderTrigger, setOrderTrigger] = useState(0);
   const [portfolioTrigger, setPortfolioTrigger] = useState(0);
   const [agentTrigger, setAgentTrigger] = useState(0);
+  const [reportTrigger, setReportTrigger] = useState(0);
 
   const fetchCoreData = useCallback(async () => {
     try {
@@ -65,6 +66,9 @@ export default function DashboardView() {
       case 'portfolio.updated':
         setPortfolioTrigger((n) => n + 1);
         fetchCoreData();
+        break;
+      case 'report.generated':
+        setReportTrigger((n) => n + 1);
         break;
       // risk.* events are handled by RiskAlertBanner directly
     }
