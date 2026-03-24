@@ -22,7 +22,9 @@ const DEFAULT_RISK: RiskConfig = {
   max_positions: 5,
   max_position_weight_pct: 20.0,
   max_daily_loss: 500000,
-  signal_approval_mode: 'auto',
+  signal_approval_mode: 'manual',
+  initial_capital: 10000000,
+  min_rr_score: 2.0,
 };
 
 export default function SettingsView({ settings, onSave, error, onBack }: Props) {
@@ -70,7 +72,9 @@ export default function SettingsView({ settings, onSave, error, onBack }: Props)
     riskForm.max_positions !== riskBase.max_positions ||
     riskForm.max_position_weight_pct !== riskBase.max_position_weight_pct ||
     riskForm.max_daily_loss !== riskBase.max_daily_loss ||
-    riskForm.signal_approval_mode !== riskBase.signal_approval_mode;
+    riskForm.signal_approval_mode !== riskBase.signal_approval_mode ||
+    riskForm.initial_capital !== riskBase.initial_capital ||
+    riskForm.min_rr_score !== riskBase.min_rr_score;
 
   const handleSave = async () => {
     setSaving(true);
@@ -266,6 +270,28 @@ export default function SettingsView({ settings, onSave, error, onBack }: Props)
               </div>
             </div>
             <div className="settings-card-body">
+              {/* Initial capital */}
+              <div className="setting-field">
+                <label className="setting-label">
+                  초기 자본금
+                  <span className="setting-hint">포트폴리오 비중 계산에 사용되는 초기 자본금</span>
+                </label>
+                <div className="risk-input-row">
+                  <input
+                    type="number"
+                    value={riskForm.initial_capital ?? 10000000}
+                    onChange={(e) => setRiskForm({ ...riskForm, initial_capital: Number(e.target.value) })}
+                    step={1000000}
+                    min={1000000}
+                    max={1000000000}
+                    className="risk-number-input risk-number-input--wide"
+                  />
+                  <span className="risk-unit">
+                    {((riskForm.initial_capital ?? 10000000) / 10000).toLocaleString()}만원
+                  </span>
+                </div>
+              </div>
+
               {/* Stop-loss */}
               <div className="setting-field">
                 <label className="setting-label" htmlFor="stop-loss">
@@ -408,6 +434,26 @@ export default function SettingsView({ settings, onSave, error, onBack }: Props)
                       <span>Manual</span>
                     </div>
                   </button>
+                </div>
+              </div>
+
+              {/* Min R/R score */}
+              <div className="setting-field">
+                <label className="setting-label">
+                  최소 R/R 스코어
+                  <span className="setting-hint">시그널 R/R 스코어가 이 값 미만이면 자동 거부됩니다</span>
+                </label>
+                <div className="token-input-row">
+                  <input
+                    type="range"
+                    min={0.5}
+                    max={5.0}
+                    step={0.1}
+                    value={riskForm.min_rr_score ?? 2.0}
+                    onChange={(e) => setRiskForm({ ...riskForm, min_rr_score: Number(e.target.value) })}
+                    className="token-slider"
+                  />
+                  <span className="token-value">{(riskForm.min_rr_score ?? 2.0).toFixed(1)}</span>
                 </div>
               </div>
             </div>

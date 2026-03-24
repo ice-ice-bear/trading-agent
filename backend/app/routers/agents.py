@@ -26,6 +26,7 @@ class RiskConfigUpdate(BaseModel):
     max_daily_loss: float | None = None
     signal_approval_mode: str | None = None
     initial_capital: float | None = None
+    min_rr_score: float | None = None
 
 
 @router.get("")
@@ -81,6 +82,7 @@ async def get_risk_config():
         "max_daily_loss": float(config.get("max_daily_loss", 500000)),
         "signal_approval_mode": config.get("signal_approval_mode", "auto"),
         "initial_capital": float(config.get("initial_capital", 0)),
+        "min_rr_score": float(config.get("min_rr_score", 2.0)),
     }
 
 
@@ -108,6 +110,7 @@ async def update_risk_config(body: RiskConfigUpdate):
         "max_daily_loss": float(config.get("max_daily_loss", 500000)),
         "signal_approval_mode": config.get("signal_approval_mode", "auto"),
         "initial_capital": float(config.get("initial_capital", 0)),
+        "min_rr_score": float(config.get("min_rr_score", 2.0)),
     }
 
 
