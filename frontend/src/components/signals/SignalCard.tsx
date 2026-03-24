@@ -178,6 +178,22 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
         );
       })()}
 
+      {/* 뉴스 동향 */}
+      {signal.metadata && (signal.metadata as Record<string, any>).news_summary &&
+       ((signal.metadata as Record<string, any>).news_summary as any).headlines?.length > 0 && (() => {
+        const news = (signal.metadata as Record<string, any>).news_summary as any;
+        return (
+          <div className="signal-section">
+            <span className="section-label">뉴스 동향 ({news.sentiment})</span>
+            <ul style={{ fontSize: '0.75rem', margin: '4px 0 0 16px', padding: 0 }}>
+              {(news.headlines as string[]).slice(0, 3).map((h: string, i: number) => (
+                <li key={i} className="text-muted">{h}</li>
+              ))}
+            </ul>
+          </div>
+        );
+      })()}
+
       {/* DART KPI tiles */}
       {dart_fundamentals && confidence_grades && (
         <FundamentalsKPI

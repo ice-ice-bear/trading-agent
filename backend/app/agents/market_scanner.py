@@ -224,6 +224,8 @@ class MarketScannerAgent(BaseAgent):
         if not expert_analyses:
             return None
 
+        metadata["news_summary"] = data_package.get("news_summary", {})
+
         # --- Stage 4: Chief Analyst debate ---
         signal_analysis = await run_chief_debate(
             stock_info, expert_analyses, portfolio_context,

@@ -160,8 +160,40 @@ DART 재무 데이터:
             "concern": "DART data unavailable",
         }
 
+    async def news_macro_analyst():
+        """뉴스/매크로 분석가"""
+        from app.services.news_service import fetch_stock_news
+        stock_info = data_package["stock"]
+        news_data = await fetch_stock_news(stock_info["name"], stock_info["code"])
+        data_package["news_summary"] = news_data
+
+        if not news_data.get("headlines"):
+            return {
+                "persona": "뉴스/매크로 분석가",
+                "view": "neutral",
+                "key_signals": ["뉴스 데이터 없음"],
+                "confidence": 0.3,
+                "concern": "뉴스 수집 실패",
+            }
+
+        prompt = f"""당신은 뉴스/매크로 분석 전문가입니다. {stock_info['name']}({stock_info['code']}) 관련 뉴스를 분석하세요.
+
+최근 뉴스 헤드라인:
+{chr(10).join(f'- {h}' for h in news_data['headlines'])}
+감성: {news_data['sentiment']}
+
+JSON으로만 응답:
+{{"persona": "뉴스/매크로 분석가", "view": "bullish|bearish|neutral", "key_signals": ["signal1", "signal2"], "confidence": 0.0~1.0, "concern": "우려사항"}}"""
+
+        model, max_tokens = _get_model()
+        client = _get_claude_client()
+        resp = await client.messages.create(model=model, max_tokens=max_tokens, messages=[{"role": "user", "content": prompt}])
+        parsed = _parse_json_response(resp.content[0].text)
+        return parsed or {"persona": "뉴스/매크로 분석가", "view": "neutral", "key_signals": [], "confidence": 0.3, "concern": "분석 실패"}
+
     tasks = [_call_expert(persona, focus, data_package) for persona, focus in experts]
     tasks.append(fundamental_analyst())
+    tasks.append(news_macro_analyst())
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     analyses = []
