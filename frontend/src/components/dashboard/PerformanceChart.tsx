@@ -1,109 +1,92 @@
-import { useEffect, useState, useCallback } from 'react';
-import { parseUTC } from '../../utils/time';
-
-interface HistoryPoint {
-  timestamp: string;
-  total_value: number;
-  cash_balance: number;
-  total_pnl: number;
-  total_pnl_pct: number;
-}
+import { useState, useEffect, useCallback } from 'react';
+import { getPerformance } from '../../services/api';
 
 interface Props {
   refreshTrigger?: number;
 }
 
+const PERIODS = [
+  { label: '1일', value: '1d' },
+  { label: '7일', value: '7d' },
+  { label: '30일', value: '30d' },
+  { label: '90일', value: '90d' },
+];
+
 export default function PerformanceChart({ refreshTrigger }: Props) {
-  const [history, setHistory] = useState<HistoryPoint[]>([]);
+  const [period, setPeriod] = useState('30d');
+  const [data, setData] = useState<{
+    returns_pct: number;
+    max_drawdown: number;
+    trade_count: number;
+    chart_data: Array<{ timestamp: string; total_value: number; total_pnl: number; total_pnl_pct: number }>;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchHistory = useCallback(() => {
-    fetch('/api/reports/performance/history?days=30')
-      .then((res) => res.json())
-      .then((data) => setHistory(data.history || []))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const result = await getPerformance(period);
+      setData(result);
+    } catch {
+      /* silent */
+    } finally {
+      setLoading(false);
+    }
+  }, [period]);
 
-  useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
-
-  useEffect(() => {
-    if (refreshTrigger && refreshTrigger > 0) fetchHistory();
-  }, [refreshTrigger, fetchHistory]);
-
-  if (loading) {
-    return (
-      <div className="dashboard-card">
-        <h3 className="card-title">Performance</h3>
-        <div className="no-data">로딩 중...</div>
-      </div>
-    );
-  }
-
-  if (history.length === 0) {
-    return (
-      <div className="dashboard-card">
-        <h3 className="card-title">Performance</h3>
-        <div className="no-data">포트폴리오 히스토리 없음</div>
-      </div>
-    );
-  }
-
-  // Simple chart: find min/max for scaling
-  const values = history.map((h) => h.total_value);
-  const minVal = Math.min(...values);
-  const maxVal = Math.max(...values);
-  const range = maxVal - minVal || 1;
-  const chartHeight = 120;
-  const chartWidth = 100; // percentage
-
-  // Build SVG polyline points
-  const points = history
-    .map((h, i) => {
-      const x = (i / Math.max(history.length - 1, 1)) * chartWidth;
-      const y = chartHeight - ((h.total_value - minVal) / range) * (chartHeight - 10) - 5;
-      return `${x},${y}`;
-    })
-    .join(' ');
-
-  // Current stats
-  const latest = history[history.length - 1];
-  const first = history[0];
-  const periodChange = latest.total_value - first.total_value;
-  const periodChangePct = first.total_value > 0 ? (periodChange / first.total_value) * 100 : 0;
+  useEffect(() => { fetchData(); }, [fetchData, refreshTrigger]);
 
   return (
-    <div className="dashboard-card performance-chart-card">
-      <h3 className="card-title">Performance</h3>
-      <div className="perf-stats">
-        <div className="perf-stat">
-          <span className="perf-label">총자산</span>
-          <span className="perf-value">{latest.total_value.toLocaleString()}원</span>
+    <div className="card">
+      <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3>성과 차트</h3>
+        <div style={{ display: 'flex', gap: '4px' }}>
+          {PERIODS.map((p) => (
+            <button
+              key={p.value}
+              className={`btn btn-sm ${period === p.value ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setPeriod(p.value)}
+            >
+              {p.label}
+            </button>
+          ))}
         </div>
-        <div className="perf-stat">
-          <span className="perf-label">기간 변동</span>
-          <span className={`perf-value ${periodChange >= 0 ? 'positive' : 'negative'}`}>
-            {periodChange >= 0 ? '+' : ''}{periodChange.toLocaleString()}원 ({periodChangePct.toFixed(2)}%)
-          </span>
+      </div>
+
+      {loading && <div className="card-body text-muted">로딩 중...</div>}
+
+      {!loading && data && data.chart_data.length > 0 && (
+        <div className="card-body">
+          <svg viewBox="0 0 100 50" style={{ width: '100%', height: '120px' }} preserveAspectRatio="none">
+            <polyline
+              fill="none"
+              stroke={data.returns_pct >= 0 ? '#22c55e' : '#ef4444'}
+              strokeWidth="0.5"
+              points={data.chart_data.map((pt, i) => {
+                const x = (i / Math.max(data.chart_data.length - 1, 1)) * 100;
+                const values = data.chart_data.map(d => d.total_value);
+                const minVal = Math.min(...values);
+                const maxVal = Math.max(...values);
+                const range = maxVal - minVal || 1;
+                const y = 50 - ((pt.total_value - minVal) / range) * 50;
+                return `${x},${y}`;
+              }).join(' ')}
+            />
+          </svg>
+
+          <div style={{ display: 'flex', gap: '16px', marginTop: '8px', fontSize: '0.85rem' }}>
+            <span className={data.returns_pct >= 0 ? 'text-positive' : 'text-negative'}>
+              수익률 {data.returns_pct >= 0 ? '+' : ''}{data.returns_pct.toFixed(2)}%
+            </span>
+            <span className="text-negative">최대낙폭 {data.max_drawdown.toFixed(2)}%</span>
+            <span className="text-muted">거래 {data.trade_count}건</span>
+          </div>
         </div>
-      </div>
-      <div className="perf-chart">
-        <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none" className="perf-svg">
-          <polyline
-            fill="none"
-            stroke={periodChange >= 0 ? 'var(--color-positive, #22c55e)' : 'var(--color-negative, #ef4444)'}
-            strokeWidth="1.5"
-            points={points}
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
-      </div>
-      <div className="perf-range">
-        <span>{parseUTC(first.timestamp).toLocaleDateString('ko-KR')}</span>
-        <span>{parseUTC(latest.timestamp).toLocaleDateString('ko-KR')}</span>
-      </div>
+      )}
+
+      {!loading && (!data || data.chart_data.length === 0) && (
+        <div className="card-body text-muted">데이터 없음</div>
+      )}
     </div>
   );
 }
