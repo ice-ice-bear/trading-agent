@@ -11,7 +11,7 @@ export default function OrderHistory({ refreshTrigger }: Props) {
   const [orders, setOrders] = useState<Order[]>([]);
 
   const fetchOrders = useCallback(() => {
-    getOrders(20)
+    getOrders(50)
       .then((data) => setOrders(data.orders))
       .catch(console.error);
   }, []);
@@ -44,34 +44,42 @@ export default function OrderHistory({ refreshTrigger }: Props) {
             <th>시간</th>
             <th>종목</th>
             <th>구분</th>
+            <th>유형</th>
             <th className="text-right">수량</th>
-            <th className="text-right">가격</th>
+            <th className="text-right">주문가</th>
+            <th className="text-right">체결가</th>
             <th>상태</th>
           </tr>
         </thead>
         <tbody>
           {orders.map((order) => (
             <tr key={order.id}>
-              <td className="order-time">
+              <td>
                 {parseUTC(order.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
               </td>
               <td>
-                <span className="stock-code">{order.stock_code}</span>
-                {order.stock_name && <span className="stock-name-sub"> {order.stock_name}</span>}
+                <span className="mono">{order.stock_code}</span>
+                {order.stock_name && <span className="text-muted"> {order.stock_name}</span>}
               </td>
               <td>
-                <span className={`side-badge ${order.side}`}>
+                <span className={`badge badge-${order.side === 'buy' ? 'long' : 'short'}`}>
                   {order.side === 'buy' ? '매수' : '매도'}
                 </span>
               </td>
+              <td className="text-muted">{order.order_type === 'limit' ? '지정가' : '시장가'}</td>
               <td className="text-right">{order.quantity.toLocaleString()}</td>
+              <td className="text-right">{order.price ? order.price.toLocaleString() : '시장가'}</td>
               <td className="text-right">
-                {order.price ? `${order.price.toLocaleString()}원` : '시장가'}
+                {order.fill_price ? order.fill_price.toLocaleString() : '-'}
+                {order.fill_quantity && order.fill_quantity !== order.quantity && (
+                  <span className="text-muted"> ({order.fill_quantity}주)</span>
+                )}
               </td>
               <td>
-                <span className={`order-status status-${order.status}`}>
-                  {order.status}
-                </span>
+                <span className={`badge status-${order.status}`}>{order.status}</span>
+                {order.signal_id && (
+                  <span className="signal-link text-muted" title={`Signal #${order.signal_id}`}> S</span>
+                )}
               </td>
             </tr>
           ))}
