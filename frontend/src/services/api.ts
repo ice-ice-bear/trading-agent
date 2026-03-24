@@ -268,6 +268,12 @@ export async function getTasks(): Promise<{ tasks: import('../types').ScheduledT
   return res.json();
 }
 
+export async function getSignalHistory(stockCode: string, limit: number = 10): Promise<{ history: Array<Record<string, unknown>> }> {
+  const res = await fetch(`/api/signals/history/${stockCode}?limit=${limit}`);
+  if (!res.ok) throw new Error('Failed to fetch signal history');
+  return res.json();
+}
+
 export async function getSignal(signalId: number): Promise<Record<string, unknown>> {
   const res = await fetch(`/api/signals/${signalId}`);
   if (!res.ok) throw new Error('Failed to fetch signal');

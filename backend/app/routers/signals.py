@@ -120,3 +120,10 @@ async def reject_signal(signal_id: int, body: SignalAction | None = None):
     )
 
     return {"success": True, "message": f"Signal #{signal_id} rejected"}
+
+
+@router.get("/history/{stock_code}")
+async def signal_history(stock_code: str, limit: int = 10):
+    from app.services.signal_history_service import get_signal_history
+    history = await get_signal_history(stock_code, limit)
+    return {"history": history}

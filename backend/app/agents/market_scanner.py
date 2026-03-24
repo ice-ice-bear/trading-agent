@@ -298,6 +298,14 @@ class MarketScannerAgent(BaseAgent):
         signal_analysis.critic_result = "pass"
 
         # --- Stage 6: Persist signal and emit ---
+        scenarios_json_str = json.dumps({
+            "bull": signal_analysis.bull.model_dump(),
+            "base": signal_analysis.base.model_dump(),
+            "bear": signal_analysis.bear.model_dump(),
+        })
+        expert_stances_json_str = json.dumps(signal_analysis.expert_stances)
+        dart_json_str = json.dumps(dart_financials) if dart_financials else None
+
         signal_id = await execute_insert(
             """INSERT INTO signals
                (agent_id, stock_code, stock_name, direction, confidence, reason, status,
@@ -312,20 +320,29 @@ class MarketScannerAgent(BaseAgent):
                 round(1 / (1 + (2.718 ** (-signal_analysis.rr_score / 2))), 4),
                 signal_analysis.variant_view[:200],
                 "pending",
-                json.dumps({
-                    "bull": signal_analysis.bull.model_dump(),
-                    "base": signal_analysis.base.model_dump(),
-                    "bear": signal_analysis.bear.model_dump(),
-                }),
+                scenarios_json_str,
                 signal_analysis.variant_view,
                 signal_analysis.rr_score,
                 current_price,
-                json.dumps(signal_analysis.expert_stances),
-                json.dumps(dart_financials) if dart_financials else None,
+                expert_stances_json_str,
+                dart_json_str,
                 json.dumps(metadata, ensure_ascii=False),
                 "pass",
                 json.dumps(confidence_grades),
             ),
+        )
+
+        # Save signal snapshot for history tracking
+        from app.services.signal_history_service import save_signal_snapshot
+        await save_signal_snapshot(
+            signal_id=signal_id,
+            stock_code=stock_code,
+            direction=signal_analysis.direction.lower(),
+            rr_score=signal_analysis.rr_score,
+            scenarios_json=scenarios_json_str,
+            expert_stances_json=expert_stances_json_str,
+            variant_view=signal_analysis.variant_view or "",
+            dart_json=dart_json_str or "",
         )
 
         await self.emit_event("signal.generated", {

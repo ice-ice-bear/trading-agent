@@ -3,6 +3,7 @@ import { getSignal, getOrders } from '../../services/api';
 import type { Signal, Order } from '../../types';
 import { SignalCard } from '../signals/SignalCard';
 import { parseUTC } from '../../utils/time';
+import SignalHistory from './SignalHistory';
 
 interface Props {
   signalId: number;
@@ -81,6 +82,8 @@ export default function SignalDetailModal({ signalId, onClose }: Props) {
             관련 주문 없음
           </p>
         )}
+
+        {signal.stock_code && <SignalHistory stockCode={signal.stock_code} />}
       </div>
     </div>
   );
