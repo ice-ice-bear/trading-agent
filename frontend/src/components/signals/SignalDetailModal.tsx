@@ -44,7 +44,17 @@ export default function SignalDetailModal({ signalId, onClose }: Props) {
       <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '720px', maxHeight: '85vh', overflow: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
           <h3>시그널 상세 #{signal.id}</h3>
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <a
+              href={`/api/memos/${signal.id}/html`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-sm btn-primary"
+            >
+              메모 내보내기
+            </a>
+            <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+          </div>
         </div>
 
         <SignalCard signal={signal} />
