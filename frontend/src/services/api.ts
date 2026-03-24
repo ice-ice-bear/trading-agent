@@ -308,3 +308,14 @@ export async function runTaskNow(taskId: number): Promise<{ task_id: number; age
   if (!res.ok) throw new Error('Failed to run task');
   return res.json();
 }
+
+// --- Calendar API ---
+
+export async function getCatalystEvents(stockCode?: string, days: number = 30): Promise<{ events: Array<{ stock_code: string | null; event_type: string; event_date: string; description: string; source: string }> }> {
+  const params = new URLSearchParams();
+  if (stockCode) params.set('stock_code', stockCode);
+  params.set('days', String(days));
+  const res = await fetch(`/api/calendar?${params}`);
+  if (!res.ok) throw new Error('Failed to fetch catalyst events');
+  return res.json();
+}

@@ -9,6 +9,7 @@ import AlertFeed from './dashboard/AlertFeed';
 import OrderHistory from './dashboard/OrderHistory';
 import SignalPanel from './dashboard/SignalPanel';
 import Watchlist from './dashboard/Watchlist';
+import CatalystTimeline from './dashboard/CatalystTimeline';
 import PerformanceChart from './dashboard/PerformanceChart';
 import RiskAlertBanner from './dashboard/RiskAlertBanner';
 
@@ -133,6 +134,7 @@ export default function DashboardView() {
             refreshTrigger={agentTrigger}
           />
           <Watchlist />
+          <CatalystTimeline />
           <AlertFeed events={events} />
         </div>
       </div>
