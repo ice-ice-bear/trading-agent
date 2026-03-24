@@ -12,6 +12,7 @@ import Watchlist from './dashboard/Watchlist';
 import CatalystTimeline from './dashboard/CatalystTimeline';
 import PerformanceChart from './dashboard/PerformanceChart';
 import RiskAlertBanner from './dashboard/RiskAlertBanner';
+import RiskDashboard from './dashboard/RiskDashboard';
 
 export default function DashboardView() {
   const [portfolio, setPortfolio] = useState<PortfolioData | null>(null);
@@ -135,6 +136,7 @@ export default function DashboardView() {
           />
           <Watchlist />
           <CatalystTimeline />
+          <RiskDashboard />
           <AlertFeed events={events} />
         </div>
       </div>

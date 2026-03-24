@@ -120,3 +120,11 @@ async def get_performance(period: str = Query(default="7d")):
         "trade_count": trade_count,
         "chart_data": snapshots,
     }
+
+
+@router.get("/risk-analysis")
+async def risk_analysis():
+    from app.services.portfolio_risk_service import compute_portfolio_risk
+    positions = await portfolio_service.get_latest_positions()
+    risk = await compute_portfolio_risk(positions)
+    return risk

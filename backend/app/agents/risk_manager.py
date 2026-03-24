@@ -224,6 +224,26 @@ class RiskManagerAgent(BaseAgent):
             if portfolio.total_pnl < -max_daily_loss:
                 return f"일일 손실 한도 초과 ({portfolio.total_pnl:,.0f}원)"
 
+            # Sector concentration gate (buy only)
+            if portfolio:
+                try:
+                    from app.models.db import execute_query as _eq
+                    row = await _eq("SELECT sector FROM kospi200_components WHERE stock_code = ?", (signal.get("stock_code"),))
+                    if row and row[0].get("sector"):
+                        signal_sector = row[0]["sector"]
+                        total_val = portfolio.total_value
+                        if total_val > 0:
+                            sector_weight = 0
+                            for pos in portfolio.positions:
+                                pos_row = await _eq("SELECT sector FROM kospi200_components WHERE stock_code = ?", (pos.get("stock_code"),))
+                                if pos_row and pos_row[0].get("sector") == signal_sector:
+                                    sector_weight += (pos.get("market_value", 0) or 0)
+                            sector_pct = sector_weight / total_val * 100
+                            if sector_pct > 40:
+                                return f"섹터 집중도 초과: {signal_sector} ({sector_pct:.0f}% > 40%)"
+                except Exception:
+                    pass  # Graceful degradation if sector data unavailable
+
         return None
 
     async def _load_risk_config(self) -> dict:
