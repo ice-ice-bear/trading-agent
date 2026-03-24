@@ -199,13 +199,19 @@ export async function getSignals(status?: string, limit = 50): Promise<{ signals
   return res.json();
 }
 
-export async function approveSignal(signalId: number): Promise<void> {
-  const res = await fetch(`/api/signals/${signalId}/approve`, { method: 'POST' });
+export async function approveSignal(signalId: number, reason?: string): Promise<void> {
+  const res = await fetch(`/api/signals/${signalId}/approve`, {
+    method: 'POST',
+    ...(reason ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) } : {}),
+  });
   if (!res.ok) throw new Error('Failed to approve signal');
 }
 
-export async function rejectSignal(signalId: number): Promise<void> {
-  const res = await fetch(`/api/signals/${signalId}/reject`, { method: 'POST' });
+export async function rejectSignal(signalId: number, reason?: string): Promise<void> {
+  const res = await fetch(`/api/signals/${signalId}/reject`, {
+    method: 'POST',
+    ...(reason ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) } : {}),
+  });
   if (!res.ok) throw new Error('Failed to reject signal');
 }
 
@@ -259,5 +265,46 @@ export async function getReport(reportId: number): Promise<import('../types').Re
 export async function getTasks(): Promise<{ tasks: import('../types').ScheduledTask[] }> {
   const res = await fetch('/api/tasks');
   if (!res.ok) throw new Error('Failed to fetch tasks');
+  return res.json();
+}
+
+export async function getSignal(signalId: number): Promise<Record<string, unknown>> {
+  const res = await fetch(`/api/signals/${signalId}`);
+  if (!res.ok) throw new Error('Failed to fetch signal');
+  return res.json();
+}
+
+export async function getAgent(agentId: string): Promise<Record<string, unknown> & { recent_logs: Array<Record<string, unknown>> }> {
+  const res = await fetch(`/api/agents/${agentId}`);
+  if (!res.ok) throw new Error('Failed to fetch agent');
+  return res.json();
+}
+// Note: backend returns Agent fields + recent_logs as flat object (not nested)
+
+export async function getPortfolioHistory(hours: number = 24): Promise<{ snapshots: Array<{ timestamp: string; total_value: number; total_pnl: number; total_pnl_pct: number }> }> {
+  const res = await fetch(`/api/dashboard/portfolio/history?hours=${hours}`);
+  if (!res.ok) throw new Error('Failed to fetch portfolio history');
+  return res.json();
+}
+
+export async function getPerformance(period: string = '7d'): Promise<{ returns_pct: number; max_drawdown: number; trade_count: number; chart_data: Array<{ timestamp: string; total_value: number; total_pnl: number; total_pnl_pct: number }> }> {
+  const res = await fetch(`/api/dashboard/performance?period=${period}`);
+  if (!res.ok) throw new Error('Failed to fetch performance');
+  return res.json();
+}
+
+export async function updateTask(taskId: number, update: { cron_expression?: string; enabled?: boolean }): Promise<{ task: Record<string, unknown> }> {
+  const res = await fetch(`/api/tasks/${taskId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(update),
+  });
+  if (!res.ok) throw new Error('Failed to update task');
+  return res.json();
+}
+
+export async function runTaskNow(taskId: number): Promise<{ task_id: number; agent_id: string; success: boolean; summary: string }> {
+  const res = await fetch(`/api/tasks/${taskId}/run-now`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to run task');
   return res.json();
 }
