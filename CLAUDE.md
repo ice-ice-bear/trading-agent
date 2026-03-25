@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-LLM-based stock trading assistant using Korea Investment & Securities (KIS) OpenAPI. A React chat UI communicates with a FastAPI backend that orchestrates Claude API calls and MCP tool execution for querying market data and paper trading.
+LLM-based stock trading assistant using Korea Investment & Securities (KIS) OpenAPI. A React dashboard + chat UI communicates with a FastAPI backend that orchestrates a multi-agent system with Claude API calls and MCP tool execution for market scanning, signal generation, risk management, and paper trading.
 
 ## Architecture
 
@@ -29,7 +29,7 @@ React (Vite, :5174)  →  FastAPI (:8001)  →  Claude API
 ```bash
 make install          # Install all dependencies (backend uv sync + frontend npm install)
 make start            # Start all 3 services (stops existing first)
-make stop             # Stop all services (kills ports 3000, 8000, 5173)
+make stop             # Stop all services (kills ports 3001, 8001, 5174)
 make status           # Show running/stopped status
 make health           # curl /health endpoint
 make logs             # Tail all service logs from .logs/
@@ -46,7 +46,7 @@ make frontend         # Frontend only (:5174)
 Direct commands (for development/debugging):
 ```bash
 # Backend
-cd backend && ENV_FILE=../.env uv run uvicorn app.main:app --reload --port 8000
+cd backend && ENV_FILE=../.env uv run uvicorn app.main:app --reload --port 8001
 
 # Frontend
 cd frontend && npx vite
@@ -58,16 +58,58 @@ cd "open-trading-api/MCP/Kis Trading MCP" && ENV_FILE=../../.env uv run python s
 cd frontend && npm run lint
 ```
 
+## Multi-Agent System
+
+### Agents (`backend/app/agents/`)
+
+| Agent | ID | Role | Description |
+|-------|----|------|-------------|
+| `PortfolioMonitorAgent` | `portfolio_monitor` | MONITOR | KIS 잔고 조회 → 포트폴리오 스냅샷 저장 |
+| `MarketScannerAgent` | `market_scanner` | SCANNER | KOSPI200 후보 스캔 → 지표 계산 → 전문가 패널 → 신호 생성 |
+| `RiskManagerAgent` | `risk_manager` | RISK | 신호/포트폴리오 검증, 손절/익절 판단 |
+| `TradingExecutorAgent` | `trading_executor` | EXECUTOR | 승인된 신호 → 주문 실행 |
+| `ReportGeneratorAgent` | `report_generator` | REPORTER | 일일/주간 리포트 생성 |
+
+### Event-Driven Flow
+
+```
+portfolio_monitor → portfolio.updated → risk_manager
+market_scanner → signal.generated → risk_manager → signal.approved → trading_executor
+                                                  → signal.rejected
+trading_executor → order.filled/order.failed → risk_manager
+risk_manager → risk.stop_loss/risk.take_profit → trading_executor
+report_generator → report.generated
+```
+
+### Scheduler (`backend/app/services/scheduler.py`)
+
+APScheduler, Asia/Seoul timezone. Tasks stored in DB (`scheduled_tasks` table).
+
+Key scheduled tasks:
+- `portfolio_check` → `portfolio_monitor` (*/5 9-15 * * 1-5)
+- `morning_scan` → `market_scanner` (5 9 * * 1-5)
+- `midday_scan` → `market_scanner` (0 12 * * 1-5)
+- `afternoon_scan` → `market_scanner` (0 14 * * 1-5)
+- `closing_check` → `portfolio_monitor` (20 15 * * 1-5)
+- `daily_report` → `report_generator` (0 16 * * 1-5)
+- `weekly_report` → `report_generator` (0 17 * * 5)
+
+### Market Scanner Expert Panel (`backend/app/agents/market_scanner_experts.py`)
+
+5명 전문가 (Momentum, Value, Technical, Macro, Sentiment) → Chief Analyst 종합 → Critic 검증 → 신호 생성
+
 ## Key Entry Points
 
 - **Backend app:** `backend/app/main.py` — FastAPI app with lifespan (MCP connect/disconnect)
 - **Chat endpoint:** `backend/app/routers/chat.py` — POST `/api/chat`, SSE event generator
-- **Agentic loop:** `backend/app/services/claude_service.py` — `stream_chat()` async generator, handles tool_use → MCP execution → feed results back to Claude
-- **MCP client:** `backend/app/services/mcp_client.py` — `mcp_manager` singleton (MCPClientManager)
+- **Agentic loop:** `backend/app/services/claude_service.py` — `stream_chat()` async generator
+- **MCP client:** `backend/app/services/mcp_client.py` — `mcp_manager` singleton (auto-reconnect on failure)
+- **Agent engine:** `backend/app/agents/engine.py` — `AgentEngine` orchestrator
+- **Event bus:** `backend/app/agents/event_bus.py` — `EventBus` pub/sub
+- **Signal models:** `backend/app/models/signal.py` — `Scenario`, `SignalAnalysis`, `compute_rr_score()`
 - **Config:** `backend/app/config.py` — Pydantic BaseSettings, loads from `.env` via `ENV_FILE` env var
-- **Frontend chat:** `frontend/src/components/ChatView.tsx` — chat UI with SSE stream handling
-- **SSE client:** `frontend/src/services/api.ts` — `sendMessage()` using `@microsoft/fetch-event-source`
-- **MCP server:** `open-trading-api/MCP/Kis Trading MCP/server.py` — FastMCP entry point, tool registration
+- **Frontend:** `frontend/src/` — React dashboard with chat, signals, portfolio, agent monitoring
+- **MCP server:** `open-trading-api/MCP/Kis Trading MCP/server.py` — FastMCP entry point
 - **MCP tools base:** `open-trading-api/MCP/Kis Trading MCP/tools/base.py` — BaseTool with ApiExecutor
 
 ## MCP Tool System
@@ -85,7 +127,7 @@ Frontend dev server proxies `/api` and `/health` to `localhost:8001` (configured
 
 ## Tech Stack
 
-- **Backend:** FastAPI, uvicorn, anthropic SDK, fastmcp, sse-starlette, pydantic-settings. Package manager: uv
+- **Backend:** FastAPI, uvicorn, anthropic SDK, fastmcp, sse-starlette, pydantic-settings, APScheduler. Package manager: uv
 - **Frontend:** React 19, Vite 7, TypeScript, react-markdown + rehype-highlight. Package manager: npm
 - **MCP Server:** FastMCP (Python), SSE transport
 - **Prerequisites:** Python 3.12+, Node.js 22+, uv, nvm
@@ -93,6 +135,13 @@ Frontend dev server proxies `/api` and `/health` to `localhost:8001` (configured
 ## Language
 
 The system prompt in `claude_service.py` is in Korean. The UI is bilingual (Korean/English).
+
+## Session Start Routine
+
+장 운영일(평일) 세션 시작 시:
+1. `make start` → `make health`로 서비스 정상 확인
+2. `/loop 5m server log를 확인하고 오류가 생성된다면 그게 코드베이스인지 아닌지 검토해서 보고자료를 만들어줘 이를 바탕으로 코드 내 에러를 수정하겠어 직접 에러수정이 가능하다면 더 좋고` 로 5분 로그 모니터링 예약
+3. 장 마감 후 loop 정리 및 변경사항 커밋
 
 ## HarnessKit
 
