@@ -409,8 +409,8 @@ class DartClient:
 
             trades = []
             for item in data.get("list", [])[:limit]:
-                shares_before = int(item.get("sp_stock_lmp_cnt", 0) or 0)
-                shares_after = int(item.get("sp_stock_lmp_irds_cnt", 0) or 0)
+                shares_before = int(str(item.get("sp_stock_lmp_cnt", 0) or 0).replace(",", ""))
+                shares_after = int(str(item.get("sp_stock_lmp_irds_cnt", 0) or 0).replace(",", ""))
                 trades.append({
                     "reporter_name": item.get("repror", ""),
                     "position": item.get("isu_exctv_rgist_at", ""),

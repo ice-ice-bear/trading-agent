@@ -152,3 +152,9 @@ async def execute_insert(query: str, params: tuple = ()) -> int:
         return cursor.lastrowid
     finally:
         await db.close()
+
+
+async def load_risk_config() -> dict[str, str]:
+    """Load all risk_config key-value pairs. Shared helper for all agents."""
+    rows = await execute_query("SELECT key, value FROM risk_config")
+    return {row["key"]: row["value"] for row in rows} if rows else {}

@@ -14,12 +14,12 @@ import logging
 
 from app.config import settings
 from app.models.confidence import CRITICAL_FIELDS
-from app.models.db import execute_insert
+from app.models.db import execute_insert, load_risk_config
 from app.models.signal import SignalAnalysis, compute_rr_score
 
 logger = logging.getLogger(__name__)
 
-_RR_TOLERANCE = 0.20   # 20% — detects hallucinated scenario values
+_DEFAULT_RR_TOLERANCE = 0.20   # 20% — detects hallucinated scenario values
 
 
 class SignalCriticAgent:
@@ -38,11 +38,18 @@ class SignalCriticAgent:
         Programmatic checks run first (no Claude call).
         Qualitative checks run only if programmatic pass.
         """
+        self._risk_config = await load_risk_config()
         passed, feedback = self._check_programmatic(signal_analysis, confidence_grades)
         if not passed:
             return False, feedback
 
-        return await self._check_qualitative(signal_analysis, expert_outputs)
+        check_dissent = self._risk_config.get("critic_check_dissent", "true").lower() != "false"
+        check_variant = self._risk_config.get("critic_check_variant", "true").lower() != "false"
+
+        if not check_dissent and not check_variant:
+            return True, None  # Both qualitative checks disabled
+
+        return await self._check_qualitative(signal_analysis, expert_outputs, check_dissent, check_variant)
 
     # ------------------------------------------------------------------
     # Programmatic checks (items 1-3)
@@ -78,9 +85,10 @@ class SignalCriticAgent:
 
         # Check 3: R/R arithmetic — compare declared vs server-computed
         computed = compute_rr_score(analysis.bull, analysis.base, analysis.bear)
+        rr_tolerance = _DEFAULT_RR_TOLERANCE
         if computed != 0:
             discrepancy = abs(analysis.rr_score - computed) / abs(computed)
-            if discrepancy > _RR_TOLERANCE:
+            if discrepancy > rr_tolerance:
                 return False, (
                     f"rr 점수 불일치: Chief 선언값 {analysis.rr_score:.2f}, "
                     f"서버 계산값 {computed:.2f} (오차 {discrepancy*100:.0f}%). "
@@ -97,6 +105,8 @@ class SignalCriticAgent:
         self,
         analysis: SignalAnalysis,
         expert_outputs: list[dict],
+        check_dissent: bool = True,
+        check_variant: bool = True,
     ) -> tuple[bool, str | None]:
         try:
             import anthropic
@@ -109,7 +119,27 @@ class SignalCriticAgent:
                 key=lambda d: list(stances.values()).count(d),
             )
 
-            prompt = f"""당신은 투자 리서치 품질 검토자입니다. 다음 신호 분석을 2가지 기준으로 평가하세요.
+            criteria_sections = []
+            if check_dissent:
+                criteria_sections.append(f"""**기준 4 — 전문가 이견 존재 여부:**
+- 최소 1명의 전문가가 다수 의견과 다른 입장을 가져야 합니다
+- 5명 전원이 동일한 입장({majority_direction})이면 실패 — variant_view가 만장일치 이유를 구체적 데이터와 함께 설명해야 통과
+- 평가: PASS 또는 FAIL""")
+            if check_variant:
+                criteria_sections.append(f"""**기준 5 — Variant View 구체성:**
+- "리스크 대비 기회", "시장 과소평가" 등 일반적 표현은 FAIL
+- DART 수치, RSI 값, 특정 분기 실적 등 구체적 데이터 포인트가 있어야 PASS
+- 현재 variant_view: "{analysis.variant_view}"
+- 평가: PASS 또는 FAIL""")
+
+            # Build JSON response template dynamically
+            json_fields = []
+            if check_dissent:
+                json_fields.extend(['"check4_result": "PASS|FAIL"', '"check4_reason": "한 문장 이유"'])
+            if check_variant:
+                json_fields.extend(['"check5_result": "PASS|FAIL"', '"check5_reason": "한 문장 이유"'])
+
+            prompt = f"""당신은 투자 리서치 품질 검토자입니다. 다음 신호 분석을 평가하세요.
 
 ## 종목 신호 분석
 - 방향: {analysis.direction}
@@ -118,23 +148,11 @@ class SignalCriticAgent:
 
 ## 평가 기준
 
-**기준 4 — 전문가 이견 존재 여부:**
-- 최소 1명의 전문가가 다수 의견과 다른 입장을 가져야 합니다
-- 5명 전원이 동일한 입장({majority_direction})이면 실패 — variant_view가 만장일치 이유를 구체적 데이터와 함께 설명해야 통과
-- 평가: PASS 또는 FAIL
-
-**기준 5 — Variant View 구체성:**
-- "리스크 대비 기회", "시장 과소평가" 등 일반적 표현은 FAIL
-- DART 수치, RSI 값, 특정 분기 실적 등 구체적 데이터 포인트가 있어야 PASS
-- 현재 variant_view: "{analysis.variant_view}"
-- 평가: PASS 또는 FAIL
+{chr(10).join(criteria_sections)}
 
 ## 응답 형식 (JSON만 출력):
 {{
-  "check4_result": "PASS|FAIL",
-  "check4_reason": "한 문장 이유",
-  "check5_result": "PASS|FAIL",
-  "check5_reason": "한 문장 이유"
+  {", ".join(json_fields)}
 }}"""
 
             response = await client.messages.create(
@@ -150,9 +168,9 @@ class SignalCriticAgent:
             result = json.loads(text)
 
             failures = []
-            if result.get("check4_result") != "PASS":
+            if check_dissent and result.get("check4_result") != "PASS":
                 failures.append(f"[기준4] {result.get('check4_reason', '')}")
-            if result.get("check5_result") != "PASS":
+            if check_variant and result.get("check5_result") != "PASS":
                 failures.append(f"[기준5] {result.get('check5_reason', '')}")
 
             if failures:

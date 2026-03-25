@@ -27,6 +27,17 @@ class RiskConfigUpdate(BaseModel):
     signal_approval_mode: str | None = None
     initial_capital: float | None = None
     min_rr_score: float | None = None
+    # Scanner settings
+    max_candidates: int | None = None
+    max_expert_stocks: int | None = None
+    # Critic settings
+    critic_check_dissent: bool | None = None
+    critic_check_variant: bool | None = None
+    # Data gate settings
+    dart_per_required: bool | None = None
+    # Execution settings
+    max_buy_qty: int | None = None
+    sector_max_pct: float | None = None
 
 
 @router.get("")
@@ -69,11 +80,8 @@ async def get_agent_events(limit: int = Query(default=100, ge=1, le=1000)):
     return {"events": events}
 
 
-@router.get("/risk-config")
-async def get_risk_config():
-    """Get current risk management configuration."""
-    rows = await execute_query("SELECT key, value FROM risk_config")
-    config = {row["key"]: row["value"] for row in rows} if rows else {}
+def _format_risk_config(config: dict) -> dict:
+    """Format risk_config dict with proper types and defaults."""
     return {
         "stop_loss_pct": float(config.get("stop_loss_pct", -3.0)),
         "take_profit_pct": float(config.get("take_profit_pct", 5.0)),
@@ -83,7 +91,26 @@ async def get_risk_config():
         "signal_approval_mode": config.get("signal_approval_mode", "auto"),
         "initial_capital": float(config.get("initial_capital", 0)),
         "min_rr_score": float(config.get("min_rr_score", 2.0)),
+        # Scanner settings
+        "max_candidates": int(config.get("max_candidates", 25)),
+        "max_expert_stocks": int(config.get("max_expert_stocks", 10)),
+        # Critic settings
+        "critic_check_dissent": config.get("critic_check_dissent", "true").lower() != "false",
+        "critic_check_variant": config.get("critic_check_variant", "true").lower() != "false",
+        # Data gate settings
+        "dart_per_required": config.get("dart_per_required", "true").lower() != "false",
+        # Execution settings
+        "max_buy_qty": int(config.get("max_buy_qty", 10)),
+        "sector_max_pct": float(config.get("sector_max_pct", 40.0)),
     }
+
+
+@router.get("/risk-config")
+async def get_risk_config():
+    """Get current risk management configuration."""
+    rows = await execute_query("SELECT key, value FROM risk_config")
+    config = {row["key"]: row["value"] for row in rows} if rows else {}
+    return _format_risk_config(config)
 
 
 @router.put("/risk-config")
@@ -102,16 +129,7 @@ async def update_risk_config(body: RiskConfigUpdate):
 
     rows = await execute_query("SELECT key, value FROM risk_config")
     config = {row["key"]: row["value"] for row in rows} if rows else {}
-    return {
-        "stop_loss_pct": float(config.get("stop_loss_pct", -3.0)),
-        "take_profit_pct": float(config.get("take_profit_pct", 5.0)),
-        "max_positions": int(config.get("max_positions", 5)),
-        "max_position_weight_pct": float(config.get("max_position_weight_pct", 20.0)),
-        "max_daily_loss": float(config.get("max_daily_loss", 500000)),
-        "signal_approval_mode": config.get("signal_approval_mode", "auto"),
-        "initial_capital": float(config.get("initial_capital", 0)),
-        "min_rr_score": float(config.get("min_rr_score", 2.0)),
-    }
+    return _format_risk_config(config)
 
 
 @router.get("/{agent_id}")

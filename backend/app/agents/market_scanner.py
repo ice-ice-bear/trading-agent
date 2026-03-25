@@ -11,7 +11,7 @@ import json
 from app.agents.signal_critic import signal_critic
 from app.models.confidence import check_hard_gate
 from app.models.signal import compute_rr_score
-from app.models.db import execute_insert
+from app.models.db import execute_insert, load_risk_config
 from app.services.dart_client import dart_client
 from app.services.market_service import (
     get_batch_charts,
@@ -23,8 +23,9 @@ from app.services.market_service import (
 
 logger = logging.getLogger(__name__)
 
-# 후보군 최대 종목 수 (Stage 2 차트 수집 대상)
-MAX_CANDIDATES = 25
+# 후보군 최대 종목 수 기본값 (Stage 2 차트 수집 대상)
+DEFAULT_MAX_CANDIDATES = 25
+DEFAULT_MAX_EXPERT_STOCKS = 10
 
 
 class MarketScannerAgent(BaseAgent):
@@ -35,6 +36,7 @@ class MarketScannerAgent(BaseAgent):
 
     async def execute(self, context: AgentContext) -> AgentResult:
         """KOSPI200 스크리닝 → 기술적 지표 계산 → 전문가 팀 분석 → 신호 생성."""
+        self._risk_config = await load_risk_config()
 
         # Stage 1: KOSPI200 스크리닝
         candidates = await self._stage1_screening()
@@ -66,8 +68,9 @@ class MarketScannerAgent(BaseAgent):
             "held_codes": [p.get("stock_code") for p in portfolio.positions],
         }
 
+        max_expert = int(self._risk_config.get("max_expert_stocks", DEFAULT_MAX_EXPERT_STOCKS))
         saved_signals = []
-        for stock_data in enriched[:10]:  # 상위 10개만 전문가 분석
+        for stock_data in enriched[:max_expert]:  # 설정된 수만큼 전문가 분석
             signal = await self._analyze_stock(stock_data, portfolio_context)
             if signal:
                 saved_signals.append(signal)
@@ -137,8 +140,9 @@ class MarketScannerAgent(BaseAgent):
                 }
             scores[code]["score"] += (50 - rank)
 
-        logger.info(f"Stage 1: 후보군 {len(scores)}개 종목 추출")
-        return sorted(scores.values(), key=lambda x: x["score"], reverse=True)[:MAX_CANDIDATES]
+        max_candidates = int(self._risk_config.get("max_candidates", DEFAULT_MAX_CANDIDATES))
+        logger.info(f"Stage 1: 후보군 {len(scores)}개 종목 추출 (상위 {max_candidates}개 선별)")
+        return sorted(scores.values(), key=lambda x: x["score"], reverse=True)[:max_candidates]
 
     async def _stage2_enrich(self, candidates: list[dict]) -> list[dict]:
         """후보 종목 차트 데이터 수집 + 기술적 지표 계산."""
@@ -211,7 +215,8 @@ class MarketScannerAgent(BaseAgent):
         metadata["insider_trades"] = insider_trades[:3]
 
         # --- Stage 2.7: Hard gate check ---
-        gate_passed, failed_fields = check_hard_gate(confidence_grades)
+        dart_per_required = self._risk_config.get("dart_per_required", "true").lower() != "false"
+        gate_passed, failed_fields = check_hard_gate(confidence_grades, dart_per_required=dart_per_required)
         if not gate_passed:
             await self._reject_signal_confidence(stock_info, confidence_grades, failed_fields)
             return None

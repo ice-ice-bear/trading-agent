@@ -1,12 +1,48 @@
 # backend/app/models/signal.py
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator, model_validator
 
 
 class Scenario(BaseModel):
-    label: str           # "강세" / "기본" / "약세"
-    price_target: float  # absolute price target (KRW)
-    upside_pct: float    # % from current price (negative = downside)
-    probability: float   # 0.0–1.0
+    label: str = ""                # "강세" / "기본" / "약세"
+    price_target: float = 0.0     # absolute price target (KRW)
+    upside_pct: float = 0.0       # % from current price (negative = downside)
+    probability: float = 0.0      # 0.0–1.0
+
+    @field_validator("price_target", "upside_pct", "probability", mode="before")
+    @classmethod
+    def coerce_numeric(cls, v):
+        """Handle string numbers, None, and comma-separated values from LLM."""
+        if v is None:
+            return 0.0
+        if isinstance(v, str):
+            v = v.replace(",", "").replace("%", "").strip()
+            if not v:
+                return 0.0
+        return float(v)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_field_names(cls, data):
+        """Map common LLM field name variants to expected names."""
+        if not isinstance(data, dict):
+            return data
+        aliases = {
+            "target_price": "price_target",
+            "target": "price_target",
+            "price": "price_target",
+            "upside": "upside_pct",
+            "return_pct": "upside_pct",
+            "expected_return": "upside_pct",
+            "prob": "probability",
+            "weight": "probability",
+            "name": "label",
+            "scenario": "label",
+        }
+        normalized = {}
+        for k, v in data.items():
+            key = aliases.get(k, k)
+            normalized[key] = v
+        return normalized
 
 
 class SignalAnalysis(BaseModel):

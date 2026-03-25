@@ -11,9 +11,9 @@ export default function SignalHistory({ stockCode }: { stockCode: string }) {
   if (history.length === 0) return null;
 
   return (
-    <div style={{ marginTop: '16px' }}>
+    <div className="signal-history-section">
       <h4>시그널 이력 ({stockCode})</h4>
-      <table className="table" style={{ fontSize: '0.8rem' }}>
+      <table className="table">
         <thead>
           <tr>
             <th>날짜</th>

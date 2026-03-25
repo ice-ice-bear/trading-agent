@@ -4,6 +4,7 @@ import logging
 
 from app.agents.base import AgentContext, AgentResult, AgentRole, BaseAgent
 from app.agents.event_bus import AgentEvent
+from app.models.db import load_risk_config
 from app.services.order_service import check_buyable, check_sellable, place_order
 
 logger = logging.getLogger(__name__)
@@ -86,8 +87,10 @@ class TradingExecutorAgent(BaseAgent):
                 })
                 return
 
-            # Buy a conservative amount (e.g. up to 10 shares or max available)
-            quantity = min(max_qty, 10)
+            # Buy up to configured max or max available
+            risk_config = await load_risk_config()
+            configured_max = int(risk_config.get("max_buy_qty", 10))
+            quantity = min(max_qty, configured_max)
 
             result = await place_order(
                 stock_code=stock_code,

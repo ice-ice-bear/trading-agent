@@ -239,8 +239,9 @@ class RiskManagerAgent(BaseAgent):
                                 if pos_row and pos_row[0].get("sector") == signal_sector:
                                     sector_weight += (pos.get("market_value", 0) or 0)
                             sector_pct = sector_weight / total_val * 100
-                            if sector_pct > 40:
-                                return f"섹터 집중도 초과: {signal_sector} ({sector_pct:.0f}% > 40%)"
+                            sector_max = float(risk_config.get("sector_max_pct", 40.0))
+                            if sector_pct > sector_max:
+                                return f"섹터 집중도 초과: {signal_sector} ({sector_pct:.0f}% > {sector_max:.0f}%)"
                 except Exception:
                     pass  # Graceful degradation if sector data unavailable
 

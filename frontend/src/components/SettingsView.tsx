@@ -25,6 +25,13 @@ const DEFAULT_RISK: RiskConfig = {
   signal_approval_mode: 'manual',
   initial_capital: 10000000,
   min_rr_score: 2.0,
+  max_candidates: 25,
+  max_expert_stocks: 10,
+  critic_check_dissent: true,
+  critic_check_variant: true,
+  dart_per_required: true,
+  max_buy_qty: 10,
+  sector_max_pct: 40.0,
 };
 
 export default function SettingsView({ settings, onSave, error, onBack }: Props) {
@@ -74,7 +81,14 @@ export default function SettingsView({ settings, onSave, error, onBack }: Props)
     riskForm.max_daily_loss !== riskBase.max_daily_loss ||
     riskForm.signal_approval_mode !== riskBase.signal_approval_mode ||
     riskForm.initial_capital !== riskBase.initial_capital ||
-    riskForm.min_rr_score !== riskBase.min_rr_score;
+    riskForm.min_rr_score !== riskBase.min_rr_score ||
+    riskForm.max_candidates !== riskBase.max_candidates ||
+    riskForm.max_expert_stocks !== riskBase.max_expert_stocks ||
+    riskForm.critic_check_dissent !== riskBase.critic_check_dissent ||
+    riskForm.critic_check_variant !== riskBase.critic_check_variant ||
+    riskForm.dart_per_required !== riskBase.dart_per_required ||
+    riskForm.max_buy_qty !== riskBase.max_buy_qty ||
+    riskForm.sector_max_pct !== riskBase.sector_max_pct;
 
   const handleSave = async () => {
     setSaving(true);
@@ -454,6 +468,183 @@ export default function SettingsView({ settings, onSave, error, onBack }: Props)
                     className="token-slider"
                   />
                   <span className="token-value">{(riskForm.min_rr_score ?? 2.0).toFixed(1)}</span>
+                </div>
+              </div>
+
+              {/* Sector concentration */}
+              <div className="setting-field">
+                <label className="setting-label">
+                  섹터 최대 비중
+                  <span className="setting-hint">동일 섹터 종목이 포트폴리오에서 차지할 수 있는 최대 비율</span>
+                </label>
+                <div className="token-input-row">
+                  <input
+                    type="range"
+                    min={10}
+                    max={80}
+                    step={5}
+                    value={riskForm.sector_max_pct ?? 40}
+                    onChange={(e) => setRiskForm({ ...riskForm, sector_max_pct: Number(e.target.value) })}
+                    className="token-slider"
+                  />
+                  <span className="token-value">{riskForm.sector_max_pct ?? 40}%</span>
+                </div>
+              </div>
+
+              {/* Max buy quantity */}
+              <div className="setting-field">
+                <label className="setting-label">
+                  주문당 최대 매수 수량
+                  <span className="setting-hint">한 번의 매수 주문에서 매수할 최대 주식 수</span>
+                </label>
+                <div className="token-input-row">
+                  <input
+                    type="range"
+                    min={1}
+                    max={100}
+                    step={1}
+                    value={riskForm.max_buy_qty ?? 10}
+                    onChange={(e) => setRiskForm({ ...riskForm, max_buy_qty: Number(e.target.value) })}
+                    className="token-slider"
+                  />
+                  <span className="token-value">{riskForm.max_buy_qty ?? 10}주</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Scanner & Critic Settings */}
+            <div className="settings-card-body" style={{ borderTop: '1px solid var(--border-secondary, #e5e5e5)', paddingTop: '16px' }}>
+              <div style={{ fontSize: '0.85em', fontWeight: 600, color: 'var(--text-secondary, #666)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>스캐너 설정</div>
+
+              {/* Max candidates */}
+              <div className="setting-field">
+                <label className="setting-label">
+                  스크리닝 후보 수
+                  <span className="setting-hint">KOSPI200에서 거래량/등락률 기준으로 선별할 최대 종목 수</span>
+                </label>
+                <div className="token-input-row">
+                  <input
+                    type="range"
+                    min={5}
+                    max={50}
+                    step={5}
+                    value={riskForm.max_candidates ?? 25}
+                    onChange={(e) => setRiskForm({ ...riskForm, max_candidates: Number(e.target.value) })}
+                    className="token-slider"
+                  />
+                  <span className="token-value">{riskForm.max_candidates ?? 25}종목</span>
+                </div>
+              </div>
+
+              {/* Max expert stocks */}
+              <div className="setting-field">
+                <label className="setting-label">
+                  전문가 분석 종목 수
+                  <span className="setting-hint">AI 전문가 패널이 심층 분석할 최대 종목 수 (Claude API 호출 비용에 영향)</span>
+                </label>
+                <div className="token-input-row">
+                  <input
+                    type="range"
+                    min={3}
+                    max={25}
+                    step={1}
+                    value={riskForm.max_expert_stocks ?? 10}
+                    onChange={(e) => setRiskForm({ ...riskForm, max_expert_stocks: Number(e.target.value) })}
+                    className="token-slider"
+                  />
+                  <span className="token-value">{riskForm.max_expert_stocks ?? 10}종목</span>
+                </div>
+              </div>
+
+              <div style={{ fontSize: '0.85em', fontWeight: 600, color: 'var(--text-secondary, #666)', marginBottom: '12px', marginTop: '16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>품질 게이트</div>
+
+              {/* DART PER required */}
+              <div className="setting-field">
+                <label className="setting-label">
+                  DART PER 필수 여부
+                  <span className="setting-hint">비활성화 시 적자 기업(PER 없음)도 분석 대상에 포함됩니다</span>
+                </label>
+                <div className="mode-toggle">
+                  <button
+                    className={`mode-btn demo ${(riskForm.dart_per_required ?? true) ? 'active' : ''}`}
+                    onClick={() => setRiskForm({ ...riskForm, dart_per_required: true })}
+                  >
+                    <span className="mode-dot demo" />
+                    <div className="mode-label">
+                      <strong>필수</strong>
+                      <span>보수적</span>
+                    </div>
+                  </button>
+                  <button
+                    className={`mode-btn real ${!(riskForm.dart_per_required ?? true) ? 'active' : ''}`}
+                    onClick={() => setRiskForm({ ...riskForm, dart_per_required: false })}
+                  >
+                    <span className="mode-dot real" />
+                    <div className="mode-label">
+                      <strong>선택</strong>
+                      <span>적자기업 허용</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Critic check: dissent */}
+              <div className="setting-field">
+                <label className="setting-label">
+                  전문가 이견 검증
+                  <span className="setting-hint">비활성화 시 전문가 만장일치도 시그널로 통과합니다</span>
+                </label>
+                <div className="mode-toggle">
+                  <button
+                    className={`mode-btn demo ${(riskForm.critic_check_dissent ?? true) ? 'active' : ''}`}
+                    onClick={() => setRiskForm({ ...riskForm, critic_check_dissent: true })}
+                  >
+                    <span className="mode-dot demo" />
+                    <div className="mode-label">
+                      <strong>활성</strong>
+                      <span>이견 필수</span>
+                    </div>
+                  </button>
+                  <button
+                    className={`mode-btn real ${!(riskForm.critic_check_dissent ?? true) ? 'active' : ''}`}
+                    onClick={() => setRiskForm({ ...riskForm, critic_check_dissent: false })}
+                  >
+                    <span className="mode-dot real" />
+                    <div className="mode-label">
+                      <strong>비활성</strong>
+                      <span>만장일치 허용</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Critic check: variant view */}
+              <div className="setting-field">
+                <label className="setting-label">
+                  Variant View 구체성 검증
+                  <span className="setting-hint">비활성화 시 구체적 데이터 포인트 없이도 시그널 통과</span>
+                </label>
+                <div className="mode-toggle">
+                  <button
+                    className={`mode-btn demo ${(riskForm.critic_check_variant ?? true) ? 'active' : ''}`}
+                    onClick={() => setRiskForm({ ...riskForm, critic_check_variant: true })}
+                  >
+                    <span className="mode-dot demo" />
+                    <div className="mode-label">
+                      <strong>활성</strong>
+                      <span>구체성 필수</span>
+                    </div>
+                  </button>
+                  <button
+                    className={`mode-btn real ${!(riskForm.critic_check_variant ?? true) ? 'active' : ''}`}
+                    onClick={() => setRiskForm({ ...riskForm, critic_check_variant: false })}
+                  >
+                    <span className="mode-dot real" />
+                    <div className="mode-label">
+                      <strong>비활성</strong>
+                      <span>일반 표현 허용</span>
+                    </div>
+                  </button>
                 </div>
               </div>
             </div>

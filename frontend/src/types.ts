@@ -36,6 +36,17 @@ export interface RiskConfig {
   signal_approval_mode: 'auto' | 'manual';
   initial_capital?: number;
   min_rr_score?: number;
+  // Scanner settings
+  max_candidates?: number;
+  max_expert_stocks?: number;
+  // Critic settings
+  critic_check_dissent?: boolean;
+  critic_check_variant?: boolean;
+  // Data gate settings
+  dart_per_required?: boolean;
+  // Execution settings
+  max_buy_qty?: number;
+  sector_max_pct?: number;
 }
 
 // Dashboard types

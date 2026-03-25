@@ -20,13 +20,16 @@ CRITICAL_FIELDS = [
 
 def check_hard_gate(
     confidence_grades: dict[str, str],
+    dart_per_required: bool = True,
 ) -> tuple[bool, list[str]]:
     """
     Returns (passed, list_of_failed_fields).
     Fails if any critical field is grade D or missing.
+    When dart_per_required=False, dart_per is excluded from the gate.
     """
+    fields = CRITICAL_FIELDS if dart_per_required else [f for f in CRITICAL_FIELDS if f != "dart_per"]
     failed = [
-        f for f in CRITICAL_FIELDS
+        f for f in fields
         if confidence_grades.get(f, "D") == "D"
     ]
     return len(failed) == 0, failed

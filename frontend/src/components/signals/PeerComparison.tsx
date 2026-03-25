@@ -15,20 +15,20 @@ export default function PeerComparison({ data }: { data: PeerData }) {
   return (
     <div className="signal-section">
       <span className="section-label">동종 업종 비교 ({data.sector})</span>
-      <table style={{ width: '100%', fontSize: '0.75rem', marginTop: '4px', borderCollapse: 'collapse' }}>
+      <table className="peer-table">
         <thead>
           <tr>
-            <th style={{ textAlign: 'left', padding: '2px 4px' }}>종목</th>
-            <th style={{ textAlign: 'right', padding: '2px 4px' }}>PER</th>
-            <th style={{ textAlign: 'right', padding: '2px 4px' }}>PBR</th>
+            <th>종목</th>
+            <th>PER</th>
+            <th>PBR</th>
           </tr>
         </thead>
         <tbody>
           {all.map((p, i) => (
-            <tr key={i} style={p.isTarget ? { fontWeight: 600, background: 'var(--color-surface, #f9fafb)' } : {}}>
-              <td style={{ padding: '2px 4px' }}>{p.name}</td>
-              <td style={{ textAlign: 'right', padding: '2px 4px' }}>{p.per?.toFixed(1) ?? '-'}</td>
-              <td style={{ textAlign: 'right', padding: '2px 4px' }}>{p.pbr?.toFixed(2) ?? '-'}</td>
+            <tr key={i} className={p.isTarget ? 'peer-target' : ''}>
+              <td>{p.name}</td>
+              <td>{p.per?.toFixed(1) ?? '-'}</td>
+              <td>{p.pbr?.toFixed(2) ?? '-'}</td>
             </tr>
           ))}
         </tbody>

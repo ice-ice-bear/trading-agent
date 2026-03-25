@@ -56,7 +56,7 @@ interface SignalCardProps {
 }
 
 const directionColor = (d: string) =>
-  d === 'buy' ? '#28a745' : d === 'sell' ? '#dc3545' : '#6c757d';
+  d === 'buy' ? '#16a34a' : d === 'sell' ? '#dc3545' : '#6c757d';
 
 export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onReject, acting, defaultExpanded }) => {
   const [expanded, setExpanded] = useState(defaultExpanded ?? false);
@@ -76,24 +76,22 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
     return 'A';
   })();
 
+  const meta = signal.metadata as SignalMetadata | undefined;
+
   return (
     <div className="card" style={{ padding: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <strong>{stock_name}</strong>
-          <span className="text-muted" style={{ marginLeft: 6, fontSize: 'var(--text-xs)' }}>({stock_code})</span>
+      <div className="signal-card-header">
+        <div className="stock-info">
+          <span className="stock-name">{stock_name}</span>
+          <span className="stock-code">({stock_code})</span>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span style={{
-            background: directionColor(direction),
-            color: '#fff', padding: '2px 10px',
-            borderRadius: 4, fontWeight: 700, fontSize: 13,
-          }}>
+        <div className="signal-card-badges">
+          <span className="direction-badge" style={{ background: directionColor(direction) }}>
             {direction.toUpperCase()}
           </span>
           {rr_score != null && (
-            <span style={{ fontWeight: 700 }}>R/R: {rr_score.toFixed(1)}</span>
+            <span className="rr-badge">R/R {rr_score.toFixed(1)}</span>
           )}
           {overallGrade && (
             <span className={`grade-badge grade-${overallGrade.toLowerCase()}`}>
@@ -106,19 +104,19 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
       {/* Scenarios */}
       {scenarios && (
         <>
-          <div className="scenario-row" style={{ marginTop: 10 }}>
+          <div className="scenario-row">
             {[
               { s: scenarios.bull, cls: 'scenario-bull', sign: '↑' },
               { s: scenarios.base, cls: 'scenario-base', sign: '→' },
               { s: scenarios.bear, cls: 'scenario-bear', sign: '↓' },
             ].map(({ s, cls, sign }) => (
               <div className={`scenario-card ${cls}`} key={s.label}>
-                <div style={{ fontSize: 11, fontWeight: 600 }}>{s.label}</div>
+                <div className="scenario-label">{s.label}</div>
                 <div className="scenario-pct">
                   {sign}{Math.abs(s.upside_pct).toFixed(1)}%
                 </div>
                 <div className="scenario-prob">확률 {(s.probability * 100).toFixed(0)}%</div>
-                <div className="text-muted" style={{ fontSize: 10 }}>
+                <div className="scenario-target">
                   {s.price_target.toLocaleString('ko-KR')}원
                 </div>
               </div>
@@ -139,148 +137,148 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
       {/* Variant view */}
       {variant_view && (
         <div className="variant-view">
-          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-primary)' }}>시장 오해: </span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-primary)', display: 'block', marginBottom: 2 }}>시장 오해</span>
           {variant_view}
         </div>
       )}
 
       {/* Expand/collapse toggle */}
-      <div
-        className="text-muted"
-        style={{ textAlign: 'center', padding: 'var(--space-1) 0', cursor: 'pointer', fontSize: 'var(--text-xs)' }}
-        onClick={() => setExpanded(!expanded)}
-      >
+      <div className="signal-expand-toggle" onClick={() => setExpanded(!expanded)}>
         {expanded ? '▲ 간략히 보기' : '▼ 상세 보기'}
       </div>
 
-      {expanded && (<>
-      {/* Risk notes */}
-      {signal.risk_notes && (
-        <div className="signal-section">
-          <span className="section-label">리스크 노트</span>
-          <p className="text-muted" style={{ fontSize: 'var(--text-xs)', margin: 'var(--space-1) 0 0' }}>{signal.risk_notes}</p>
-        </div>
-      )}
+      {expanded && (
+      <div className="signal-sections-group">
+        {/* Risk notes */}
+        {signal.risk_notes && (
+          <div className="signal-section">
+            <span className="section-label">리스크 노트</span>
+            <p className="text-muted" style={{ fontSize: 'var(--text-xs)', margin: 'var(--space-1) 0 0' }}>{signal.risk_notes}</p>
+          </div>
+        )}
 
-      {/* Expert panel */}
-      {signal.expert_stances && Object.keys(signal.expert_stances).length > 0 && (
-        <div className="signal-section">
-          <div
-            className="section-header"
-            style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-            onClick={() => setExpandedExperts(!expandedExperts)}
-          >
-            <span className="section-label">전문가 패널</span>
-            <span style={{ fontSize: '0.75rem' }}>{expandedExperts ? '▲' : '▼'}</span>
-          </div>
-          <div className="expert-chips">
-            {Object.entries(signal.expert_stances).map(([name, stance]) => (
-              <span key={name} className={`expert-chip stance-${stance}`} title={name}>
-                {name.split(' ')[0]}
-              </span>
-            ))}
-          </div>
-          {expandedExperts && (
-            <div className="expert-details" style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)' }}>
+        {/* Expert panel */}
+        {signal.expert_stances && Object.keys(signal.expert_stances).length > 0 && (
+          <div className="signal-section">
+            <div
+              style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              onClick={() => setExpandedExperts(!expandedExperts)}
+            >
+              <span className="section-label" style={{ marginBottom: 0 }}>전문가 패널</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)' }}>{expandedExperts ? '▲' : '▼'}</span>
+            </div>
+            <div className="expert-chips" style={{ marginTop: 'var(--space-2)' }}>
               {Object.entries(signal.expert_stances).map(([name, stance]) => (
-                <div key={name} style={{ padding: 'var(--space-1) 0', borderBottom: '1px solid var(--color-border-light, var(--color-border))' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <strong>{name}</strong>
-                    <span className={`badge stance-${stance}`}>{stance}</span>
+                <span key={name} className={`expert-chip stance-${stance}`} title={name}>
+                  {name.split(' ')[0]}
+                </span>
+              ))}
+            </div>
+            {expandedExperts && (
+              <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)' }}>
+                {Object.entries(signal.expert_stances).map(([name, stance]) => (
+                  <div key={name} style={{ padding: 'var(--space-1) 0', borderBottom: '1px solid var(--color-border-light, var(--color-border))' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <strong>{name}</strong>
+                      <span className={`badge stance-${stance}`}>{stance}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 수급 동향 + 내부자 거래 — side by side when both present */}
+        {(() => {
+          const trend = meta?.investor_trend;
+          const trades = meta?.insider_trades;
+          if (!trend && (!trades || trades.length === 0)) return null;
+
+          return (
+            <div className="signal-section" style={{ display: 'flex', gap: 'var(--space-4)' }}>
+              {trend && (
+                <div style={{ flex: 1 }}>
+                  <span className="section-label">수급 동향 ({trend.days || 20}일)</span>
+                  <div style={{ display: 'flex', gap: 'var(--space-3)', fontSize: 'var(--text-xs)', marginTop: 'var(--space-1)' }}>
+                    <span className={trend.foreign_net_buy >= 0 ? 'text-positive' : 'text-negative'}>
+                      외국인 {trend.foreign_net_buy >= 0 ? '+' : ''}{Number(trend.foreign_net_buy).toLocaleString()}주
+                    </span>
+                    <span className={trend.institution_net_buy >= 0 ? 'text-positive' : 'text-negative'}>
+                      기관 {trend.institution_net_buy >= 0 ? '+' : ''}{Number(trend.institution_net_buy).toLocaleString()}주
+                    </span>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 수급 동향 */}
-      {(() => {
-        const meta = signal.metadata as SignalMetadata | undefined;
-        const trend = meta?.investor_trend;
-        if (!trend) return null;
-        return (
-          <div className="signal-section">
-            <span className="section-label">수급 동향 ({trend.days || 20}일)</span>
-            <div style={{ display: 'flex', gap: 'var(--space-4)', fontSize: 'var(--text-xs)', marginTop: 'var(--space-1)' }}>
-              <span className={trend.foreign_net_buy >= 0 ? 'text-positive' : 'text-negative'}>
-                외국인 {trend.foreign_net_buy >= 0 ? '+' : ''}{Number(trend.foreign_net_buy).toLocaleString()}주
-              </span>
-              <span className={trend.institution_net_buy >= 0 ? 'text-positive' : 'text-negative'}>
-                기관 {trend.institution_net_buy >= 0 ? '+' : ''}{Number(trend.institution_net_buy).toLocaleString()}주
-              </span>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* 내부자 거래 */}
-      {(() => {
-        const meta = signal.metadata as SignalMetadata | undefined;
-        const trades = meta?.insider_trades;
-        if (!trades || trades.length === 0) return null;
-        return (
-          <div className="signal-section">
-            <span className="section-label">내부자 거래</span>
-            <div style={{ fontSize: 'var(--text-xs)', marginTop: 'var(--space-1)' }}>
-              {trades.map((t, i) => (
-                <div key={i} className="text-muted">
-                  {t.reporter_name}: <span className={t.change_amount >= 0 ? 'text-positive' : 'text-negative'}>
-                    {t.change_amount >= 0 ? '+' : ''}{Number(t.change_amount).toLocaleString()}주
-                  </span> ({t.report_date})
+              )}
+              {trades && trades.length > 0 && (
+                <div style={{ flex: 1 }}>
+                  <span className="section-label">내부자 거래</span>
+                  <div style={{ fontSize: 'var(--text-xs)', marginTop: 'var(--space-1)' }}>
+                    {trades.map((t, i) => (
+                      <div key={i} className="text-muted" style={{ lineHeight: 1.6 }}>
+                        {t.reporter_name}: <span className={t.change_amount >= 0 ? 'text-positive' : 'text-negative'}>
+                          {t.change_amount >= 0 ? '+' : ''}{Number(t.change_amount).toLocaleString()}주
+                        </span>
+                        <span style={{ opacity: 0.6, marginLeft: 4 }}>{t.report_date}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              )}
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
-      {/* 뉴스 동향 */}
-      {(() => {
-        const meta = signal.metadata as SignalMetadata | undefined;
-        const news = meta?.news_summary;
-        if (!news || !news.headlines?.length) return null;
-        return (
+        {/* 뉴스 동향 */}
+        {(() => {
+          const news = meta?.news_summary;
+          if (!news || !news.headlines?.length) return null;
+          const sentimentColor = news.sentiment === 'positive' ? 'var(--color-success)' :
+                                 news.sentiment === 'negative' ? 'var(--color-error)' : 'var(--color-text-secondary)';
+          return (
+            <div className="signal-section">
+              <span className="section-label">
+                뉴스 동향 <span style={{ color: sentimentColor, textTransform: 'none', letterSpacing: 0 }}>({news.sentiment})</span>
+              </span>
+              <ul style={{ fontSize: 'var(--text-xs)', margin: 'var(--space-1) 0 0 var(--space-4)', padding: 0, lineHeight: 1.7 }}>
+                {news.headlines.slice(0, 3).map((h, i) => (
+                  <li key={i} className="text-muted">{h}</li>
+                ))}
+              </ul>
+            </div>
+          );
+        })()}
+
+        {/* 피어 비교 */}
+        {(() => {
+          const peerData = meta?.peer_comparison;
+          if (!peerData?.sector) return null;
+          return <PeerComparison data={peerData} />;
+        })()}
+
+        {/* DCF 밸류에이션 */}
+        {(() => {
+          const dcf = meta?.dcf_valuation;
+          if (!dcf?.fair_value) return null;
+          return <ValuationView dcf={dcf} />;
+        })()}
+
+        {/* DART KPI tiles */}
+        {dart_fundamentals && confidence_grades && (
           <div className="signal-section">
-            <span className="section-label">뉴스 동향 ({news.sentiment})</span>
-            <ul style={{ fontSize: 'var(--text-xs)', margin: 'var(--space-1) 0 0 var(--space-4)', padding: 0 }}>
-              {news.headlines.slice(0, 3).map((h, i) => (
-                <li key={i} className="text-muted">{h}</li>
-              ))}
-            </ul>
+            <span className="section-label">DART 재무지표</span>
+            <FundamentalsKPI
+              dartFundamentals={dart_fundamentals}
+              confidenceGrades={confidence_grades}
+            />
           </div>
-        );
-      })()}
-
-      {/* 피어 비교 */}
-      {(() => {
-        const meta = signal.metadata as SignalMetadata | undefined;
-        const peerData = meta?.peer_comparison;
-        if (!peerData?.sector) return null;
-        return <PeerComparison data={peerData} />;
-      })()}
-
-      {/* DCF 밸류에이션 */}
-      {(() => {
-        const meta = signal.metadata as SignalMetadata | undefined;
-        const dcf = meta?.dcf_valuation;
-        if (!dcf?.fair_value) return null;
-        return <ValuationView dcf={dcf} />;
-      })()}
-
-      {/* DART KPI tiles */}
-      {dart_fundamentals && confidence_grades && (
-        <FundamentalsKPI
-          dartFundamentals={dart_fundamentals}
-          confidenceGrades={confidence_grades}
-        />
+        )}
+      </div>
       )}
-      </>)}
 
       {/* Footer: critic + approve/reject */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'var(--space-2)' }}>
-        <div className="text-muted" style={{ display: 'flex', gap: 'var(--space-3)', fontSize: 'var(--text-xs)' }}>
+      <div className="signal-card-footer">
+        <div className="meta-info">
           <span>
             Critic: {critic_result === 'pass'
               ? '✓ 통과'

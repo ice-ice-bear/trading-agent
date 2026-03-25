@@ -68,30 +68,57 @@ cd frontend && npm run lint
 - **Frontend chat:** `frontend/src/components/ChatView.tsx` — chat UI with SSE stream handling
 - **SSE client:** `frontend/src/services/api.ts` — `sendMessage()` using `@microsoft/fetch-event-source`
 - **MCP server:** `open-trading-api/MCP/Kis Trading MCP/server.py` — FastMCP entry point, tool registration
-- **MCP tools base:** `open-trading-api/MCP/Kis Trading MCP/tools/base.py` — BaseTool with ApiExecutor (downloads API code from GitHub, modifies for paper trading, executes via subprocess)
+- **MCP tools base:** `open-trading-api/MCP/Kis Trading MCP/tools/base.py` — BaseTool with ApiExecutor
 
 ## MCP Tool System
 
-The MCP server exposes 8 tool classes (`domestic_stock`, `overseas_stock`, `domestic_bond`, `domestic_futureoption`, `overseas_futureoption`, `elw`, `etfetn`, `auth`) covering 166 KIS APIs. Each tool's `_run()` method handles three call types:
+The MCP server exposes 8 tool classes covering 166 KIS APIs. Each tool's `_run()` method handles three call types:
 1. `find_stock_code` — stock lookup from master database
 2. `find_api_detail` — API metadata lookup
-3. Regular API calls — download Python code from GitHub, modify for demo mode (forces `env_dv=demo`), inject auth credentials, execute via subprocess
+3. Regular API calls — download Python code from GitHub, modify for demo mode, inject auth credentials, execute via subprocess
 
 ## Configuration
 
-All services read from a single `.env` file at project root (passed via `ENV_FILE` env var). Copy `.env.example` to `.env` and fill in required values.
-
-Required: `ANTHROPIC_API_KEY`, `KIS_PAPER_APP_KEY`, `KIS_PAPER_APP_SECRET`, `KIS_PAPER_STOCK`
+All services read from a single `.env` file at project root (passed via `ENV_FILE` env var). Required: `ANTHROPIC_API_KEY`, `KIS_PAPER_APP_KEY`, `KIS_PAPER_APP_SECRET`, `KIS_PAPER_STOCK`
 
 Frontend dev server proxies `/api` and `/health` to `localhost:8001` (configured in `frontend/vite.config.ts`).
 
 ## Tech Stack
 
-- **Backend:** FastAPI, uvicorn, anthropic SDK, fastmcp (MCP client), sse-starlette, pydantic-settings. Package manager: uv
-- **Frontend:** React 19, Vite 7, TypeScript, react-markdown + rehype-highlight, @microsoft/fetch-event-source. Package manager: npm
+- **Backend:** FastAPI, uvicorn, anthropic SDK, fastmcp, sse-starlette, pydantic-settings. Package manager: uv
+- **Frontend:** React 19, Vite 7, TypeScript, react-markdown + rehype-highlight. Package manager: npm
 - **MCP Server:** FastMCP (Python), SSE transport
 - **Prerequisites:** Python 3.12+, Node.js 22+, uv, nvm
 
 ## Language
 
-The system prompt in `claude_service.py` is in Korean. The UI is bilingual (Korean/English). User-facing trading queries are typically in Korean.
+The system prompt in `claude_service.py` is in Korean. The UI is bilingual (Korean/English).
+
+## HarnessKit
+
+### Session Start Protocol
+1. Read `progress/claude-progress.txt`
+2. Read `docs/feature_list.json` — select highest priority `passes: false` feature
+3. Write selected feature ID to `.harnesskit/current-feature.txt`
+4. Run existing tests to verify baseline
+
+### Session End Protocol
+1. Update `progress/claude-progress.txt` with what was implemented, what's broken, what's next
+2. Update `docs/feature_list.json` — set `passes: true` only after tests pass
+3. Commit changes
+
+### Error Logging (automatic)
+- On error: append to `.harnesskit/current-session.jsonl`:
+  `{"type":"error","pattern":"error message","file":"file path"}`
+
+### Tool Usage Logging (v2a — automatic)
+- On major tool use, append to `.harnesskit/current-session.jsonl`:
+  `{"type":"tool_call","tool":"ToolName","summary":"brief description","timestamp":"HH:MM"}`
+  (Log Bash, Edit, Write, WebSearch, WebFetch only — skip Read, Glob, Grep)
+
+### Absolute Rules
+- Do NOT modify `feature_list.json` except the `passes` field
+- One feature per session
+- Never set `passes: true` without passing tests
+
+For harness engineering principles → .harnesskit/bible.md
