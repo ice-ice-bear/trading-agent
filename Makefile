@@ -60,7 +60,7 @@ start: stop
 	@cd "$(MCP_DIR)" && $(BG_RUN) env ENV_FILE="$(ENV_FILE)" uv run python server.py > "$(MCP_LOG)" 2>&1 &
 	@echo "  [1/3] MCP server starting on :3001..."
 	@sleep 3
-	@cd "$(BACKEND_DIR)" && $(BG_RUN) env ENV_FILE="$(ENV_FILE)" uv run uvicorn app.main:app --reload --port 8001 > "$(BACKEND_LOG)" 2>&1 &
+	@cd "$(BACKEND_DIR)" && $(BG_RUN) env ENV_FILE="$(ENV_FILE)" uv run uvicorn app.main:app --reload --port 8001 --ws wsproto > "$(BACKEND_LOG)" 2>&1 &
 	@echo "  [2/3] Backend starting on :8001..."
 	@sleep 2
 	@$(NVM_INIT) && cd "$(FRONTEND_DIR)" && $(BG_RUN) npx vite --host --port 5174 > "$(FRONTEND_LOG)" 2>&1 &
@@ -90,7 +90,7 @@ mcp:
 backend:
 	@mkdir -p $(LOG_DIR)
 	@echo "Starting backend..."
-	@cd "$(BACKEND_DIR)" && $(BG_RUN) env ENV_FILE="$(ENV_FILE)" uv run uvicorn app.main:app --reload --port 8001 > "$(BACKEND_LOG)" 2>&1 &
+	@cd "$(BACKEND_DIR)" && $(BG_RUN) env ENV_FILE="$(ENV_FILE)" uv run uvicorn app.main:app --reload --port 8001 --ws wsproto > "$(BACKEND_LOG)" 2>&1 &
 	@sleep 2
 	@echo "  Backend running on :8001"
 
