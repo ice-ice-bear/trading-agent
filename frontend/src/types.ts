@@ -244,3 +244,73 @@ export interface PortfolioSnapshot {
   total_pnl: number;
   total_pnl_pct: number;
 }
+
+// ── Stock Info / Research types ──────────────────────────────────────
+
+export interface StockPrice {
+  stck_prpr: string;       // 현재가
+  prdy_vrss: string;       // 전일대비
+  prdy_ctrt: string;       // 전일대비율
+  stck_oprc: string;       // 시가
+  stck_hgpr: string;       // 고가
+  stck_lwpr: string;       // 저가
+  acml_vol: string;        // 누적거래량
+  [key: string]: unknown;
+}
+
+export interface TechnicalIndicators {
+  rsi: number | null;
+  macd: { macd: number; signal: number; histogram: number; cross: string } | null;
+  bollinger: { upper: number; middle: number; lower: number; bandwidth: number; position: string } | null;
+  ma: { ma20: number | null; ma50: number | null; ma200: number | null };
+  volume_trend_pct: number | null;
+}
+
+export interface StockAnalysis {
+  chart: Record<string, string>[];
+  technicals: TechnicalIndicators | null;
+  fundamentals: DartFundamentals | null;
+  confidence_grades: Record<string, string>;
+  investor_trend: { foreign_net_buy: number; institution_net_buy: number; days?: number };
+  insider_trades: InsiderTrade[];
+  dcf: DCFResult | null;
+}
+
+export interface InsiderTrade {
+  reporter_name: string;
+  position: string;
+  change_type: string;
+  shares_before: number;
+  shares_after: number;
+  change_amount: number;
+  report_date: string;
+}
+
+export interface DCFResult {
+  fair_value: number;
+  enterprise_value?: number;
+  assumptions?: { wacc: number; growth_rate: number; terminal_growth: number };
+  projected_fcf?: number[];
+  sensitivity?: number[][];
+  cash_flow_data?: Record<string, unknown>;
+}
+
+export interface StockNews {
+  news: { headlines: string[]; sentiment: string; summary?: string; source?: string };
+  disclosures: { stock_code?: string; event_type: string; event_date: string; description: string; source: string }[];
+}
+
+export interface MarketRanks {
+  volume_rank: RankItem[];
+  fluctuation_rank: RankItem[];
+}
+
+export interface RankItem {
+  [key: string]: unknown;
+}
+
+export interface SearchResult {
+  stock_code: string;
+  stock_name: string;
+  market: string;
+}

@@ -331,3 +331,36 @@ export async function getCatalystEvents(stockCode?: string, days: number = 30): 
   if (!res.ok) throw new Error('Failed to fetch catalyst events');
   return res.json();
 }
+
+// ── Research API ─────────────────────────────────────────────────────
+
+export async function searchStocks(query: string): Promise<{ results: import('../types').SearchResult[] }> {
+  const res = await fetch(`/api/research/search?q=${encodeURIComponent(query)}`);
+  if (!res.ok) throw new Error('Search failed');
+  return res.json();
+}
+
+export async function getMarketRanks(): Promise<import('../types').MarketRanks> {
+  const res = await fetch('/api/research/ranks');
+  if (!res.ok) throw new Error('Failed to fetch ranks');
+  return res.json();
+}
+
+export async function getStockPrice(stockCode: string): Promise<import('../types').StockPrice> {
+  const res = await fetch(`/api/research/${stockCode}/price`);
+  if (!res.ok) throw new Error('Failed to fetch price');
+  return res.json();
+}
+
+export async function getStockAnalysis(stockCode: string): Promise<import('../types').StockAnalysis> {
+  const res = await fetch(`/api/research/${stockCode}/analysis`);
+  if (!res.ok) throw new Error('Failed to fetch analysis');
+  return res.json();
+}
+
+export async function getStockNews(stockCode: string, stockName = ''): Promise<import('../types').StockNews> {
+  const params = new URLSearchParams({ stock_name: stockName });
+  const res = await fetch(`/api/research/${stockCode}/news?${params}`);
+  if (!res.ok) throw new Error('Failed to fetch news');
+  return res.json();
+}
