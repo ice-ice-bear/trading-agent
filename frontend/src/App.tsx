@@ -9,6 +9,7 @@ import SettingsView from './components/SettingsView';
 import DashboardView from './components/DashboardView';
 import ReportViewer from './components/ReportViewer';
 import AgentWorkflow from './components/AgentWorkflow';
+import StockInfoView from './components/StockInfoView';
 import './App.css';
 
 const STORAGE_KEYS = {
@@ -160,6 +161,8 @@ function App() {
             <ReportViewer />
           ) : currentView === 'agents' ? (
             <AgentWorkflow />
+          ) : currentView === 'stockinfo' ? (
+            <StockInfoView />
           ) : null}
         </div>
       </div>
