@@ -36,6 +36,11 @@ class TradingScheduler:
         await self._load_tasks_from_db()
         self._scheduler.start()
         self._started = True
+
+        # Log next fire times for all jobs
+        for job in self._scheduler.get_jobs():
+            logger.info(f"Job {job.id} next fire: {job.next_run_time}")
+
         logger.info("Trading scheduler started")
 
     async def stop(self) -> None:
@@ -56,6 +61,34 @@ class TradingScheduler:
             self._add_job(task)
         logger.info(f"Loaded {len(tasks)} scheduled tasks")
 
+    @staticmethod
+    def _convert_dow_cron_to_apscheduler(dow: str) -> str:
+        """Convert standard cron day-of-week (0=Sun,1=Mon..6=Sat) to APScheduler (0=Mon..6=Sun).
+
+        Standard cron uses 0=Sunday, APScheduler uses 0=Monday.
+        Handles ranges (1-5), lists (1,3,5), single values, and */N.
+        """
+        # Named days and wildcards need no conversion
+        if any(c.isalpha() for c in dow) or dow == "*" or dow.startswith("*/"):
+            return dow
+
+        def convert_single(val: str) -> str:
+            n = int(val)
+            # cron: 0=Sun,1=Mon..6=Sat -> APScheduler: 0=Mon..6=Sun
+            return str((n - 1) % 7)
+
+        # Handle lists: "1,3,5"
+        if "," in dow:
+            return ",".join(convert_single(v) for v in dow.split(","))
+
+        # Handle ranges: "1-5"
+        if "-" in dow:
+            start, end = dow.split("-", 1)
+            return f"{convert_single(start)}-{convert_single(end)}"
+
+        # Single value
+        return convert_single(dow)
+
     def _add_job(self, task: dict) -> None:
         """Add a single job to the APScheduler."""
         job_id = f"task_{task['name']}"
@@ -70,12 +103,13 @@ class TradingScheduler:
         try:
             parts = cron_expr.split()
             if len(parts) == 5:
+                dow = self._convert_dow_cron_to_apscheduler(parts[4])
                 trigger = CronTrigger(
                     minute=parts[0],
                     hour=parts[1],
                     day=parts[2],
                     month=parts[3],
-                    day_of_week=parts[4],
+                    day_of_week=dow,
                     timezone="Asia/Seoul",
                 )
             else:
