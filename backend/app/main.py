@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import agents, calendar, chat, dashboard, health, memos, peers, reports, settings, signals, tasks, watchlist, ws
+from app.routers import agents, calendar, chat, dashboard, health, memos, peers, reports, research, settings, signals, tasks, watchlist, ws
 from app.services.dart_client import dart_client
 from app.services.mcp_client import mcp_manager
 from app.agents.signal_critic import signal_critic
@@ -139,3 +139,6 @@ app.include_router(peers.router)
 
 # Phase 5 routers
 app.include_router(memos.router)
+
+# Phase 6 routers
+app.include_router(research.router)
