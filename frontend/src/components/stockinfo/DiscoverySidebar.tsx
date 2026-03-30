@@ -31,11 +31,12 @@ export default function DiscoverySidebar({ onSelectStock, collapsed, onToggle }:
   // Debounced search
   useEffect(() => {
     if (query.length < 2) {
-      setSearchResults([]);
-      return;
+      // Use functional updates via setTimeout to avoid sync setState in effect
+      const t = setTimeout(() => { setSearchResults([]); setSearching(false); }, 0);
+      return () => clearTimeout(t);
     }
-    setSearching(true);
     const timer = setTimeout(() => {
+      setSearching(true);
       searchStocks(query)
         .then(res => setSearchResults(res.results))
         .catch(() => setSearchResults([]))

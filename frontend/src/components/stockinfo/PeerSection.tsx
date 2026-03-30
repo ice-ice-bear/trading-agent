@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useReducer } from 'react';
 import { getPeerComparison } from '../../services/api';
 import SectionSkeleton from './SectionSkeleton';
 
@@ -6,29 +6,45 @@ interface PeerSectionProps {
   stockCode: string;
 }
 
+interface State {
+  data: Record<string, unknown> | null;
+  loading: boolean;
+  error: string | null;
+}
+
+type Action =
+  | { type: 'fetch' }
+  | { type: 'success'; data: Record<string, unknown> }
+  | { type: 'error'; message: string };
+
+function reducer(_: State, action: Action): State {
+  switch (action.type) {
+    case 'fetch': return { data: null, loading: true, error: null };
+    case 'success': return { data: action.data, loading: false, error: null };
+    case 'error': return { data: null, loading: false, error: action.message };
+  }
+}
+
 export default function PeerSection({ stockCode }: PeerSectionProps) {
-  const [data, setData] = useState<Record<string, unknown> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [state, dispatch] = useReducer(reducer, { data: null, loading: true, error: null });
   const [expanded, setExpanded] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
-  const fetchData = () => {
-    setLoading(true);
-    setError(null);
+  useEffect(() => {
+    dispatch({ type: 'fetch' });
     getPeerComparison(stockCode)
-      .then(setData)
-      .catch(() => setError('동종업종 데이터를 불러올 수 없습니다'))
-      .finally(() => setLoading(false));
-  };
+      .then(d => dispatch({ type: 'success', data: d }))
+      .catch(() => dispatch({ type: 'error', message: '동종업종 데이터를 불러올 수 없습니다' }));
+  }, [stockCode, retryKey]);
 
-  useEffect(() => { fetchData(); }, [stockCode]);
+  const { data, loading, error } = state;
 
   const peers = (data as { peers?: Record<string, unknown>[] })?.peers ?? [];
   const target = (data as { target?: Record<string, unknown> })?.target;
   const sector = (data as { sector?: string })?.sector ?? '';
 
   return (
-    <SectionSkeleton title={`🏢 동종업종 비교${sector ? ` — ${sector}` : ''}`} loading={loading} error={error} onRetry={fetchData}>
+    <SectionSkeleton title={`🏢 동종업종 비교${sector ? ` — ${sector}` : ''}`} loading={loading} error={error} onRetry={() => setRetryKey(k => k + 1)}>
       <div className="peer-container">
         <div className="peer-header-row">
           <button className="research-btn-sm" onClick={() => setExpanded(!expanded)}>

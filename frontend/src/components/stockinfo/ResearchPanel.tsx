@@ -31,31 +31,36 @@ export default function ResearchPanel({ stockCode, stockName }: ResearchPanelPro
   useEffect(() => {
     if (!stockCode) return;
 
-    // Reset all state
-    setPrice(null);
-    setAnalysis(null);
-    setNews(null);
-    setAnalysisError(null);
-    setNewsError(null);
+    // Wrap in microtask to avoid sync setState in effect body
+    const load = async () => {
+      // Reset all state
+      setPrice(null);
+      setAnalysis(null);
+      setNews(null);
+      setAnalysisError(null);
+      setNewsError(null);
 
-    // Phase 1: fire all requests in parallel
-    setPriceLoading(true);
-    getStockPrice(stockCode)
-      .then(setPrice)
-      .catch(() => {})
-      .finally(() => setPriceLoading(false));
+      // Phase 1: fire all requests in parallel
+      setPriceLoading(true);
+      setAnalysisLoading(true);
+      setNewsLoading(true);
 
-    setAnalysisLoading(true);
-    getStockAnalysis(stockCode)
-      .then(setAnalysis)
-      .catch(() => setAnalysisError('분석 데이터를 불러올 수 없습니다'))
-      .finally(() => setAnalysisLoading(false));
+      getStockPrice(stockCode)
+        .then(setPrice)
+        .catch(() => {})
+        .finally(() => setPriceLoading(false));
 
-    setNewsLoading(true);
-    getStockNews(stockCode, stockName)
-      .then(setNews)
-      .catch(() => setNewsError('뉴스를 불러올 수 없습니다'))
-      .finally(() => setNewsLoading(false));
+      getStockAnalysis(stockCode)
+        .then(setAnalysis)
+        .catch(() => setAnalysisError('분석 데이터를 불러올 수 없습니다'))
+        .finally(() => setAnalysisLoading(false));
+
+      getStockNews(stockCode, stockName)
+        .then(setNews)
+        .catch(() => setNewsError('뉴스를 불러올 수 없습니다'))
+        .finally(() => setNewsLoading(false));
+    };
+    load();
   }, [stockCode, stockName]);
 
   if (!stockCode) {
