@@ -24,7 +24,7 @@ const DEFAULT_RISK: RiskConfig = {
   max_daily_loss: 500000,
   signal_approval_mode: 'manual',
   initial_capital: 10000000,
-  min_rr_score: 2.0,
+  min_rr_score: 0.3,
   max_candidates: 25,
   max_expert_stocks: 10,
   critic_check_dissent: true,
@@ -32,6 +32,8 @@ const DEFAULT_RISK: RiskConfig = {
   dart_per_required: true,
   max_buy_qty: 10,
   sector_max_pct: 40.0,
+  calibration_ceiling: 2.0,
+  min_hold_minutes: 0,
 };
 
 export default function SettingsView({ settings, onSave, error, onBack }: Props) {
@@ -88,7 +90,9 @@ export default function SettingsView({ settings, onSave, error, onBack }: Props)
     riskForm.critic_check_variant !== riskBase.critic_check_variant ||
     riskForm.dart_per_required !== riskBase.dart_per_required ||
     riskForm.max_buy_qty !== riskBase.max_buy_qty ||
-    riskForm.sector_max_pct !== riskBase.sector_max_pct;
+    riskForm.sector_max_pct !== riskBase.sector_max_pct ||
+    riskForm.calibration_ceiling !== riskBase.calibration_ceiling ||
+    riskForm.min_hold_minutes !== riskBase.min_hold_minutes;
 
   const handleSave = async () => {
     setSaving(true);
@@ -460,14 +464,34 @@ export default function SettingsView({ settings, onSave, error, onBack }: Props)
                 <div className="token-input-row">
                   <input
                     type="range"
-                    min={0.5}
-                    max={5.0}
-                    step={0.1}
-                    value={riskForm.min_rr_score ?? 2.0}
+                    min={0.1}
+                    max={3.0}
+                    step={0.05}
+                    value={riskForm.min_rr_score ?? 0.3}
                     onChange={(e) => setRiskForm({ ...riskForm, min_rr_score: Number(e.target.value) })}
                     className="token-slider"
                   />
-                  <span className="token-value">{(riskForm.min_rr_score ?? 2.0).toFixed(1)}</span>
+                  <span className="token-value">{(riskForm.min_rr_score ?? 0.3).toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Calibration ceiling */}
+              <div className="setting-field">
+                <label className="setting-label">
+                  신뢰도 보정 기준값
+                  <span className="setting-hint">이 R/R 스코어를 신뢰도 100%로 매핑합니다 (높을수록 보수적)</span>
+                </label>
+                <div className="token-input-row">
+                  <input
+                    type="range"
+                    min={1.0}
+                    max={5.0}
+                    step={0.5}
+                    value={riskForm.calibration_ceiling ?? 2.0}
+                    onChange={(e) => setRiskForm({ ...riskForm, calibration_ceiling: Number(e.target.value) })}
+                    className="token-slider"
+                  />
+                  <span className="token-value">{(riskForm.calibration_ceiling ?? 2.0).toFixed(1)}</span>
                 </div>
               </div>
 
@@ -508,6 +532,26 @@ export default function SettingsView({ settings, onSave, error, onBack }: Props)
                     className="token-slider"
                   />
                   <span className="token-value">{riskForm.max_buy_qty ?? 10}주</span>
+                </div>
+              </div>
+
+              {/* Min hold time */}
+              <div className="setting-field">
+                <label className="setting-label">
+                  최소 보유 시간
+                  <span className="setting-hint">매수 후 이 시간이 경과해야 매도 신호 허용 (0 = 제한 없음)</span>
+                </label>
+                <div className="risk-input-row">
+                  <input
+                    type="number"
+                    value={riskForm.min_hold_minutes ?? 0}
+                    onChange={(e) => setRiskForm({ ...riskForm, min_hold_minutes: Number(e.target.value) })}
+                    min={0}
+                    max={1440}
+                    step={5}
+                    className="risk-number-input"
+                  />
+                  <span className="risk-unit">분</span>
                 </div>
               </div>
             </div>

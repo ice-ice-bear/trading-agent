@@ -47,6 +47,10 @@ export interface RiskConfig {
   // Execution settings
   max_buy_qty?: number;
   sector_max_pct?: number;
+  // Confidence calibration
+  calibration_ceiling?: number;
+  // Hold time gate
+  min_hold_minutes?: number;
 }
 
 // Dashboard types
