@@ -246,6 +246,10 @@ async def run_chief_debate(
     if dart_financials:
         dart_section = f"\n## DART 재무 데이터\n{json.dumps(dart_financials, ensure_ascii=False, indent=2)}\n"
 
+    held_codes = portfolio_context.get("held_codes", [])
+    held_codes_str = ", ".join(held_codes) if held_codes else "없음"
+    stock_code = stock_info.get("code", "")
+
     prompt = f"""{critic_prefix}당신은 Chief Market Analyst입니다.
 5명의 전문가 의견({consensus_hint})을 검토하고 최종 매매 결정을 내리세요.
 
@@ -256,6 +260,15 @@ async def run_chief_debate(
 
 포트폴리오: {json.dumps(portfolio_context, ensure_ascii=False)}
 {dart_section}
+
+## 매매 방향 규칙
+- BUY: 이 종목을 신규 매수하라
+- SELL: 보유 중인 포지션을 청산하라 (현재 보유 종목: [{held_codes_str}])
+- HOLD: 관망 (매수하지도, 매도하지도 않음)
+
+중요: SELL은 반드시 현재 보유 중인 종목에 대해서만 가능합니다.
+{stock_code}이(가) 보유 종목 목록에 없으면 SELL 대신 HOLD를 선택하세요.
+
 분석 후 아래 JSON 형식으로 응답하세요. 반드시 ```json 코드 블록으로 감싸세요.
 확률 합계(bull+base+bear)는 반드시 1.0이어야 합니다.
 
