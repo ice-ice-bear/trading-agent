@@ -10,7 +10,7 @@ from app.agents.state import shared_state
 import json
 from app.agents.signal_critic import signal_critic
 from app.models.confidence import check_hard_gate
-from app.models.signal import compute_rr_score
+from app.models.signal import compute_rr_score, compute_confidence
 from app.models.db import execute_insert, load_risk_config
 from app.services.dart_client import dart_client
 from app.services.market_service import (
@@ -335,7 +335,7 @@ class MarketScannerAgent(BaseAgent):
                 stock_code,
                 stock_name,
                 signal_analysis.direction.lower(),
-                round(1 / (1 + (2.718 ** (-signal_analysis.rr_score / 2))), 4),
+                round(compute_confidence(signal_analysis.rr_score, ceiling=float(self._risk_config.get("calibration_ceiling", "2.0"))) / 100, 4),
                 signal_analysis.variant_view[:200],
                 "pending",
                 scenarios_json_str,
@@ -368,7 +368,7 @@ class MarketScannerAgent(BaseAgent):
             "stock_code": stock_code,
             "stock_name": stock_name,
             "direction": signal_analysis.direction.lower(),
-            "confidence": round(1 / (1 + (2.718 ** (-signal_analysis.rr_score / 2))), 4),
+            "confidence": round(compute_confidence(signal_analysis.rr_score, ceiling=float(self._risk_config.get("calibration_ceiling", "2.0"))) / 100, 4),
             "rr_score": signal_analysis.rr_score,
             "critic_result": "pass",
         })

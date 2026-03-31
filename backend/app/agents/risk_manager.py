@@ -261,5 +261,5 @@ class RiskManagerAgent(BaseAgent):
                 "max_position_weight_pct": "20.0",
                 "max_daily_loss": "500000",
                 "signal_approval_mode": "auto",
-                "min_rr_score": "2.0",
+                "min_rr_score": "0.3",
             }

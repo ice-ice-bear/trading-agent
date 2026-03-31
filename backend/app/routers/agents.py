@@ -27,6 +27,7 @@ class RiskConfigUpdate(BaseModel):
     signal_approval_mode: str | None = None
     initial_capital: float | None = None
     min_rr_score: float | None = None
+    calibration_ceiling: float | None = None
     # Scanner settings
     max_candidates: int | None = None
     max_expert_stocks: int | None = None
@@ -90,7 +91,8 @@ def _format_risk_config(config: dict) -> dict:
         "max_daily_loss": float(config.get("max_daily_loss", 500000)),
         "signal_approval_mode": config.get("signal_approval_mode", "auto"),
         "initial_capital": float(config.get("initial_capital", 0)),
-        "min_rr_score": float(config.get("min_rr_score", 2.0)),
+        "min_rr_score": float(config.get("min_rr_score", 0.3)),
+        "calibration_ceiling": float(config.get("calibration_ceiling", 2.0)),
         # Scanner settings
         "max_candidates": int(config.get("max_candidates", 25)),
         "max_expert_stocks": int(config.get("max_expert_stocks", 10)),
