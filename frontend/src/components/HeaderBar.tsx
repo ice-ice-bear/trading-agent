@@ -33,7 +33,8 @@ export default function HeaderBar({
   return (
     <header className="header-bar">
       <div className="header-title">
-        <span className="header-brand">KIS Trading</span>
+        <img src="/logo-icon.png" alt="" className="header-logo-icon" />
+        <span className="header-brand-text">ALPHA <span className="header-brand-accent">PULSE</span></span>
       </div>
 
       <div className="header-right">

@@ -163,7 +163,7 @@ export default function ChatView({ sessionId, messages, setMessages, onFirstMess
         {messages.length === 0 && (
           <div className="welcome">
             <div className="welcome-orb" />
-            <h2>KIS Trading Assistant</h2>
+            <h2>Alpha Pulse Assistant</h2>
             <p>한국투자증권 모의투자 AI 어시스턴트입니다.<br />주식 시세 조회, 매매 주문, 잔고 확인 등을 도와드립니다.</p>
             <div className="suggestions">
               <button onClick={() => setInput('삼성전자 현재가 알려줘')}>

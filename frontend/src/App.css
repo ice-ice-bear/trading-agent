@@ -65,15 +65,34 @@
   min-width: 0;
 }
 
-.header-brand {
-  background: none;
-  border: none;
-  font-size: var(--text-base);
-  font-weight: 700;
-  font-family: var(--font-sans);
-  color: var(--color-text);
-  padding: 0;
+.header-logo-icon {
+  height: 36px;
+  width: auto;
   flex-shrink: 0;
+}
+
+[data-theme="dark"] .header-logo-icon {
+  filter: brightness(1.6) saturate(1.3);
+}
+
+.header-brand-text {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #1e2d4a;
+  line-height: 1;
+}
+
+.header-brand-accent {
+  color: #e04b3a;
+}
+
+[data-theme="dark"] .header-brand-text {
+  color: #e8ecf2;
+}
+
+[data-theme="dark"] .header-brand-accent {
+  color: #f06050;
 }
 
 
