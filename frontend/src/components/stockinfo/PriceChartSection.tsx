@@ -1,4 +1,4 @@
-import { TechnicalIndicators } from '../../types';
+import type { TechnicalIndicators } from '../../types';
 import SectionSkeleton from './SectionSkeleton';
 
 interface PriceChartSectionProps {

@@ -1,4 +1,4 @@
-import { StockPrice } from '../../types';
+import type { StockPrice } from '../../types';
 import { addToWatchlist } from '../../services/api';
 
 interface ResearchHeaderProps {

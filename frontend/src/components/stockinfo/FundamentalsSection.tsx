@@ -1,4 +1,4 @@
-import { DartFundamentals } from '../../types';
+import type { DartFundamentals } from '../../types';
 import SectionSkeleton from './SectionSkeleton';
 
 interface FundamentalsSectionProps {

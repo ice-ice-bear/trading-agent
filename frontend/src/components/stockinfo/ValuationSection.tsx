@@ -1,4 +1,4 @@
-import { DCFResult } from '../../types';
+import type { DCFResult } from '../../types';
 import SectionSkeleton from './SectionSkeleton';
 
 interface ValuationSectionProps {

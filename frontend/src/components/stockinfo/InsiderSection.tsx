@@ -1,4 +1,4 @@
-import { InsiderTrade } from '../../types';
+import type { InsiderTrade } from '../../types';
 import SectionSkeleton from './SectionSkeleton';
 
 interface InsiderSectionProps {

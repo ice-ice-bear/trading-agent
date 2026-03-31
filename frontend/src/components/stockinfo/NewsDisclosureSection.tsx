@@ -1,4 +1,4 @@
-import { StockNews } from '../../types';
+import type { StockNews } from '../../types';
 import SectionSkeleton from './SectionSkeleton';
 
 interface NewsDisclosureSectionProps {
