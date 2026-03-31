@@ -17,7 +17,7 @@ type OverlayKey = 'ma20' | 'ma50' | 'bb';
 const MARGIN = { top: 10, right: 55, bottom: 20, left: 0 };
 const PRICE_H = 180;
 const VOL_H = 60;
-const GAP = 4;
+const GAP = 20;
 const DIVIDER = 1;
 const TOTAL_H = MARGIN.top + PRICE_H + DIVIDER + GAP + VOL_H + MARGIN.bottom;
 
@@ -96,12 +96,14 @@ function RSICard({ rsi }: { rsi: number | null }) {
         <span className="tech-card-value" style={{ color: zoneColor }}>{rsi?.toFixed(1) ?? '—'}</span>
       </div>
       <div className="rsi-gauge">
-        <div className="rsi-gauge-bg">
+        <div className="rsi-band">
           <div className="rsi-zone rsi-oversold" />
           <div className="rsi-zone rsi-neutral" />
           <div className="rsi-zone rsi-overbought" />
+          <div className="rsi-marker" style={{ left: `${Math.min(100, Math.max(0, val))}%` }}>
+            <span className="rsi-marker-label">{val.toFixed(1)}</span>
+          </div>
         </div>
-        <div className="rsi-needle" style={{ left: `${Math.min(100, Math.max(0, val))}%` }} />
         <div className="rsi-labels">
           <span>0</span><span>30</span><span>70</span><span>100</span>
         </div>
