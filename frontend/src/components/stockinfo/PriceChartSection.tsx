@@ -150,17 +150,17 @@ function MACDCard({ macd, chart }: { macd: TechnicalIndicators['macd']; chart: R
         </span>
       </div>
       {histBars.length > 0 ? (
-        <svg viewBox={`0 0 ${histBars.length * 4} 40`} className="macd-mini-chart" preserveAspectRatio="none">
-          <line x1="0" y1="20" x2={histBars.length * 4} y2="20" stroke="var(--border-color)" strokeWidth="0.5" />
+        <svg viewBox={`0 0 ${histBars.length * 5} 60`} className="macd-mini-chart" preserveAspectRatio="none">
+          <line x1="0" y1="30" x2={histBars.length * 5} y2="30" stroke="var(--border-color)" strokeWidth="0.5" />
           {histBars.map((h, i) => {
-            const barH = (Math.abs(h) / histMax) * 18;
-            const y = h >= 0 ? 20 - barH : 20;
+            const barH = (Math.abs(h) / histMax) * 28;
+            const y = h >= 0 ? 30 - barH : 30;
             return (
               <rect
                 key={i}
-                x={i * 4 + 0.5}
+                x={i * 5 + 0.5}
                 y={y}
-                width="3"
+                width="4"
                 height={barH}
                 fill={h >= 0 ? 'var(--color-success)' : 'var(--color-error)'}
                 opacity="0.7"
@@ -240,16 +240,16 @@ function VolumeCard({ volumeTrendPct, chart }: { volumeTrendPct: number | null; 
         </span>
       </div>
       {vols.length > 0 && (
-        <svg viewBox={`0 0 ${vols.length * 5} 36`} className="vol-mini-chart" preserveAspectRatio="none">
+        <svg viewBox={`0 0 ${vols.length * 6} 56`} className="vol-mini-chart" preserveAspectRatio="none">
           {vols.map((v, i) => {
-            const h = (v / vMax) * 32;
+            const h = (v / vMax) * 50;
             const bullish = closes[i] >= opens[i];
             return (
               <rect
                 key={i}
-                x={i * 5 + 0.5}
-                y={36 - h}
-                width="4"
+                x={i * 6 + 0.5}
+                y={56 - h}
+                width="5"
                 height={h}
                 fill={bullish ? 'var(--color-success)' : 'var(--color-error)'}
                 opacity="0.6"
