@@ -50,11 +50,31 @@ async def _call_expert(
     client = _get_claude_client()
     model, max_tokens = _get_model()
 
+    # Build per-expert data subset
+    expert_data = {
+        "stock": data_package.get("stock"),
+        "technicals": data_package.get("technicals"),
+        "portfolio_context": data_package.get("portfolio_context"),
+    }
+
+    # Selective enrichment per expert specialty
+    if "기술적" in persona or "모멘텀" in persona:
+        if data_package.get("investor_trend"):
+            expert_data["investor_trend"] = data_package["investor_trend"]
+    if "리스크" in persona:
+        if data_package.get("confidence_grades"):
+            expert_data["confidence_grades"] = data_package["confidence_grades"]
+    if "전략가" in persona:
+        if data_package.get("dart_summary"):
+            expert_data["dart_summary"] = data_package["dart_summary"]
+        if data_package.get("investor_trend"):
+            expert_data["investor_trend"] = data_package["investor_trend"]
+
     prompt = f"""당신은 {persona}입니다.
 아래 주식 데이터를 {focus} 관점에서 분석하세요.
 
 ## 분석 데이터
-{json.dumps(data_package, ensure_ascii=False, indent=2)}
+{json.dumps(expert_data, ensure_ascii=False, indent=2)}
 
 ## 응답 형식 (JSON만 출력)
 ```json

@@ -224,6 +224,16 @@ class MarketScannerAgent(BaseAgent):
         # Update data_package with dart_financials for the 5th expert
         data_package["dart_financials"] = dart_financials
 
+        # Enrich data_package with all collected data before expert panel
+        data_package["confidence_grades"] = confidence_grades
+        # Create compact DART summary for non-fundamental experts
+        if dart_financials:
+            data_package["dart_summary"] = {
+                k: dart_financials.get(k)
+                for k in ("per", "pbr", "roe", "debt_ratio", "revenue_growth", "operating_margin", "sector")
+                if dart_financials.get(k) is not None
+            }
+
         # Stage 3: 전문가 병렬 분석
         expert_analyses = await run_expert_panel(data_package, dart_financials=dart_financials)
         if not expert_analyses:
