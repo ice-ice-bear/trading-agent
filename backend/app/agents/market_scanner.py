@@ -263,6 +263,14 @@ class MarketScannerAgent(BaseAgent):
             logger.warning(f"Chief debate returned None for {stock_code}")
             return None
 
+        # SELL hard gate: convert to HOLD if stock not in portfolio
+        if signal_analysis.direction == "SELL" and stock_code not in portfolio_context.get("held_codes", []):
+            logger.info(
+                f"SELL→HOLD conversion: {stock_code} not in held_codes "
+                f"{portfolio_context.get('held_codes', [])}"
+            )
+            signal_analysis.direction = "HOLD"
+
         if signal_analysis.direction == "HOLD":
             return None  # hold 신호는 저장하지 않음
 
