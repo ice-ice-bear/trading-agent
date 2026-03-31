@@ -1,6 +1,6 @@
 # backend/tests/test_signal_models.py
 import pytest
-from app.models.signal import Scenario, SignalAnalysis, compute_rr_score
+from app.models.signal import Scenario, SignalAnalysis, compute_rr_score, compute_confidence
 
 
 def _make_scenarios():
@@ -55,3 +55,23 @@ def test_signal_analysis_probability_validation():
         rr_score=1.0, variant_view="test", expert_stances={}, critic_result="pending",
     )
     assert analysis.bull.probability == 0.6
+
+
+def test_compute_confidence_linear_mapping():
+    """Linear mapping: confidence = rr_score / ceiling * 100, clamped 0-100."""
+    assert compute_confidence(0.0, ceiling=2.0) == 0.0
+    assert compute_confidence(1.0, ceiling=2.0) == 50.0
+    assert compute_confidence(2.0, ceiling=2.0) == 100.0
+
+
+def test_compute_confidence_clamps_to_100():
+    assert compute_confidence(5.0, ceiling=2.0) == 100.0
+
+
+def test_compute_confidence_clamps_to_0():
+    assert compute_confidence(-1.0, ceiling=2.0) == 0.0
+
+
+def test_compute_confidence_custom_ceiling():
+    assert compute_confidence(1.0, ceiling=4.0) == 25.0
+    assert compute_confidence(4.0, ceiling=4.0) == 100.0
