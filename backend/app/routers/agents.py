@@ -39,6 +39,7 @@ class RiskConfigUpdate(BaseModel):
     # Execution settings
     max_buy_qty: int | None = None
     sector_max_pct: float | None = None
+    min_hold_minutes: int | None = None
 
 
 @router.get("")
@@ -104,6 +105,7 @@ def _format_risk_config(config: dict) -> dict:
         # Execution settings
         "max_buy_qty": int(config.get("max_buy_qty", 10)),
         "sector_max_pct": float(config.get("sector_max_pct", 40.0)),
+        "min_hold_minutes": int(config.get("min_hold_minutes", 0)),
     }
 
 

@@ -245,6 +245,34 @@ class RiskManagerAgent(BaseAgent):
                 except Exception:
                     pass  # Graceful degradation if sector data unavailable
 
+        # --- SELL-specific gates ---
+        elif direction == "sell":
+            # Must hold the stock to sell it
+            held = any(
+                p.get("stock_code") == stock_code for p in portfolio.positions
+            )
+            if not held:
+                return f"미보유 종목 매도 불가 ({stock_code})"
+
+            # Optional: minimum hold time check
+            min_hold = int(risk_config.get("min_hold_minutes", 0))
+            if min_hold > 0:
+                try:
+                    from app.models.db import execute_query as _eq
+                    row = await _eq(
+                        "SELECT MIN(timestamp) as first_buy FROM orders "
+                        "WHERE stock_code = ? AND side = 'buy' AND status = 'filled'",
+                        (stock_code,),
+                    )
+                    if row and row[0].get("first_buy"):
+                        from datetime import datetime, timezone
+                        first_buy = datetime.fromisoformat(row[0]["first_buy"])
+                        elapsed = (datetime.now(timezone.utc) - first_buy).total_seconds() / 60
+                        if elapsed < min_hold:
+                            return f"최소 보유 시간 미달 ({elapsed:.0f}분 < {min_hold}분)"
+                except Exception:
+                    pass  # Graceful degradation
+
         return None
 
     async def _load_risk_config(self) -> dict:
