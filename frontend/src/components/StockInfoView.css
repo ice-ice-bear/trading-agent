@@ -221,8 +221,34 @@
 }
 
 /* Chart */
+.chart-controls {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+.chart-type-btns, .chart-overlay-btns {
+  display: flex;
+  gap: 2px;
+}
+.chart-ctrl-btn {
+  padding: 2px 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 10px;
+}
+.chart-ctrl-btn.active {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+.chart-ctrl-btn:hover:not(.active) {
+  background: var(--bg-hover);
+}
 .chart-container { overflow: hidden; }
-.price-chart-svg { width: 100%; height: 160px; }
+.price-chart-svg { width: 100%; height: auto; }
 .technicals-row {
   display: flex;
   gap: var(--space-4);
