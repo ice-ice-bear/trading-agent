@@ -30,29 +30,49 @@ _RANKS_TTL = 300  # seconds
 
 @router.get("/search")
 async def search_stocks(q: str = Query(..., min_length=2)):
-    """Search stocks by name or code via MCP find_stock_code."""
+    """Search stocks by name or code via MCP find_stock_code.
+
+    MCP find_stock_code expects {"stock_name": "..."} and returns a single
+    match: {"ok": True, "data": {"stock_code": "...", "stock_name_found": "..."}}.
+    We wrap the single result into a list for the frontend.
+    """
     try:
         raw = await mcp_manager.call_tool(
             "domestic_stock",
-            {"api_type": "find_stock_code", "params": {"query": q}},
+            {"api_type": "find_stock_code", "params": {"stock_name": q}},
         )
         import json as _json
 
-        if hasattr(raw, "content"):
+        # Parse MCP response — may be CallToolResult, str, or dict
+        if isinstance(raw, str):
+            try:
+                data = _json.loads(raw)
+            except (_json.JSONDecodeError, TypeError):
+                data = {}
+        elif hasattr(raw, "content"):
             text = raw.content if isinstance(raw.content, str) else raw.content[0].text
             try:
                 data = _json.loads(text)
             except (_json.JSONDecodeError, TypeError):
-                data = []
-        elif isinstance(raw, list):
-            data = raw
+                data = {}
         elif isinstance(raw, dict):
-            data = raw.get("results", raw.get("output", []))
+            data = raw
         else:
-            data = []
+            data = {}
 
         results = []
-        if isinstance(data, list):
+
+        # MCP returns {"ok": True, "data": {"stock_code": ..., "stock_name_found": ...}}
+        if isinstance(data, dict) and data.get("ok"):
+            inner = data.get("data", {})
+            if inner.get("found") and inner.get("stock_code"):
+                results.append({
+                    "stock_code": inner["stock_code"],
+                    "stock_name": inner.get("stock_name_found", q),
+                    "market": inner.get("ex", ""),
+                })
+        # Fallback: if data is a list (future-proofing)
+        elif isinstance(data, list):
             for item in data[:20]:
                 if isinstance(item, dict):
                     results.append({
@@ -60,6 +80,7 @@ async def search_stocks(q: str = Query(..., min_length=2)):
                         "stock_name": item.get("stock_name", item.get("name", "")),
                         "market": item.get("market", ""),
                     })
+
         return {"results": results}
     except Exception as e:
         logger.warning(f"Stock search failed for q={q}: {e}")

@@ -31,36 +31,36 @@ export default function ResearchPanel({ stockCode, stockName }: ResearchPanelPro
   useEffect(() => {
     if (!stockCode) return;
 
-    // Wrap in microtask to avoid sync setState in effect body
+    let cancelled = false;
+
     const load = async () => {
-      // Reset all state
       setPrice(null);
       setAnalysis(null);
       setNews(null);
       setAnalysisError(null);
       setNewsError(null);
-
-      // Phase 1: fire all requests in parallel
       setPriceLoading(true);
       setAnalysisLoading(true);
       setNewsLoading(true);
 
       getStockPrice(stockCode)
-        .then(setPrice)
+        .then(d => { if (!cancelled) setPrice(d); })
         .catch(() => {})
-        .finally(() => setPriceLoading(false));
+        .finally(() => { if (!cancelled) setPriceLoading(false); });
 
       getStockAnalysis(stockCode)
-        .then(setAnalysis)
-        .catch(() => setAnalysisError('분석 데이터를 불러올 수 없습니다'))
-        .finally(() => setAnalysisLoading(false));
+        .then(d => { if (!cancelled) setAnalysis(d); })
+        .catch(() => { if (!cancelled) setAnalysisError('분석 데이터를 불러올 수 없습니다'); })
+        .finally(() => { if (!cancelled) setAnalysisLoading(false); });
 
       getStockNews(stockCode, stockName)
-        .then(setNews)
-        .catch(() => setNewsError('뉴스를 불러올 수 없습니다'))
-        .finally(() => setNewsLoading(false));
+        .then(d => { if (!cancelled) setNews(d); })
+        .catch(() => { if (!cancelled) setNewsError('뉴스를 불러올 수 없습니다'); })
+        .finally(() => { if (!cancelled) setNewsLoading(false); });
     };
     load();
+
+    return () => { cancelled = true; };
   }, [stockCode, stockName]);
 
   if (!stockCode) {
