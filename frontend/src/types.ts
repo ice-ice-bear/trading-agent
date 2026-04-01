@@ -35,7 +35,7 @@ export interface RiskConfig {
   max_daily_loss: number;
   signal_approval_mode: 'auto' | 'manual';
   initial_capital?: number;
-  min_rr_score?: number;
+  min_composite_score?: number;
   // Scanner settings
   max_candidates?: number;
   max_expert_stocks?: number;
@@ -51,6 +51,12 @@ export interface RiskConfig {
   calibration_ceiling?: number;
   // Hold time gate
   min_hold_minutes?: number;
+  // Multi-factor weights
+  weight_rr_ratio?: number;
+  weight_expert_consensus?: number;
+  weight_fundamental?: number;
+  weight_technical?: number;
+  weight_institutional?: number;
 }
 
 // Dashboard types
