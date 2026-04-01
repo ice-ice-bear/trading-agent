@@ -71,15 +71,3 @@ def compute_rr_score(bull: Scenario, base: Scenario, bear: Scenario) -> float:
     )
     denominator = max(abs(bear.upside_pct * bear.probability), 0.01)
     return numerator / denominator
-
-
-def compute_confidence(rr_score: float, ceiling: float = 2.0) -> float:
-    """
-    Linear mapping from rr_score to 0–100% confidence.
-
-    ceiling defines what rr_score maps to 100%.
-    Scores below 0 clamp to 0%, above ceiling clamp to 100%.
-    """
-    if ceiling <= 0:
-        return 0.0
-    return min(max(rr_score / ceiling * 100, 0.0), 100.0)

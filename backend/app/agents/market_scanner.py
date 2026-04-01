@@ -10,7 +10,8 @@ from app.agents.state import shared_state
 import json
 from app.agents.signal_critic import signal_critic
 from app.models.confidence import check_hard_gate
-from app.models.signal import compute_rr_score, compute_confidence
+from app.models.signal import compute_rr_score
+from app.models.composite_score import compute_composite_score
 from app.models.db import execute_insert, load_risk_config
 from app.services.dart_client import dart_client
 from app.services.market_service import (
@@ -333,6 +334,25 @@ class MarketScannerAgent(BaseAgent):
 
         signal_analysis.critic_result = "pass"
 
+        # --- Stage 4.5: Multi-factor composite score ---
+        factor_weights = {
+            "rr_ratio": float(self._risk_config.get("weight_rr_ratio", "0.25")),
+            "expert_consensus": float(self._risk_config.get("weight_expert_consensus", "0.25")),
+            "fundamental": float(self._risk_config.get("weight_fundamental", "0.20")),
+            "technical": float(self._risk_config.get("weight_technical", "0.20")),
+            "institutional": float(self._risk_config.get("weight_institutional", "0.10")),
+        }
+        composite_score = compute_composite_score(
+            rr_score=signal_analysis.rr_score,
+            calibration_ceiling=float(self._risk_config.get("calibration_ceiling", "2.0")),
+            expert_analyses=expert_analyses,
+            dart_financials=dart_financials,
+            technicals=indicators,
+            investor_trend=investor_trend,
+            confidence_grades=confidence_grades,
+            weights=factor_weights,
+        )
+
         # --- Stage 6: Persist signal and emit ---
         scenarios_json_str = json.dumps({
             "bull": signal_analysis.bull.model_dump(),
@@ -353,7 +373,7 @@ class MarketScannerAgent(BaseAgent):
                 stock_code,
                 stock_name,
                 signal_analysis.direction.lower(),
-                round(compute_confidence(signal_analysis.rr_score, ceiling=float(self._risk_config.get("calibration_ceiling", "2.0"))) / 100, 4),
+                round(composite_score / 100, 4),
                 signal_analysis.variant_view[:200],
                 "pending",
                 scenarios_json_str,
@@ -386,7 +406,7 @@ class MarketScannerAgent(BaseAgent):
             "stock_code": stock_code,
             "stock_name": stock_name,
             "direction": signal_analysis.direction.lower(),
-            "confidence": round(compute_confidence(signal_analysis.rr_score, ceiling=float(self._risk_config.get("calibration_ceiling", "2.0"))) / 100, 4),
+            "confidence": round(composite_score / 100, 4),
             "rr_score": signal_analysis.rr_score,
             "critic_result": "pass",
         })
