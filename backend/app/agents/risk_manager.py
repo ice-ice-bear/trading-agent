@@ -186,12 +186,13 @@ class RiskManagerAgent(BaseAgent):
         direction = signal.get("direction", "")
         stock_code = signal.get("stock_code", "")
 
-        # --- NEW: R/R score gate ---
-        rr_score = signal.get("rr_score")
-        if rr_score is not None:
-            min_rr = float(risk_config.get("min_rr_score", "2.0"))
-            if rr_score < min_rr:
-                return f"R/R 점수 미달 ({rr_score:.2f} < {min_rr:.1f})"
+        # --- Composite score gate ---
+        confidence = signal.get("confidence")
+        if confidence is not None:
+            min_composite = float(risk_config.get("min_composite_score", "15"))
+            composite_pct = confidence * 100  # confidence is 0–1, threshold is 0–100
+            if composite_pct < min_composite:
+                return f"복합 점수 미달 ({composite_pct:.1f}% < {min_composite:.0f}%)"
 
         # --- NEW: Critic result gate ---
         critic_result = signal.get("critic_result")
@@ -289,5 +290,5 @@ class RiskManagerAgent(BaseAgent):
                 "max_position_weight_pct": "20.0",
                 "max_daily_loss": "500000",
                 "signal_approval_mode": "auto",
-                "min_rr_score": "0.3",
+                "min_composite_score": "15",
             }
