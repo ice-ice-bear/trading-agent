@@ -26,8 +26,14 @@ class RiskConfigUpdate(BaseModel):
     max_daily_loss: float | None = None
     signal_approval_mode: str | None = None
     initial_capital: float | None = None
-    min_rr_score: float | None = None
+    min_composite_score: float | None = None
     calibration_ceiling: float | None = None
+    # Multi-factor weights
+    weight_rr_ratio: float | None = None
+    weight_expert_consensus: float | None = None
+    weight_fundamental: float | None = None
+    weight_technical: float | None = None
+    weight_institutional: float | None = None
     # Scanner settings
     max_candidates: int | None = None
     max_expert_stocks: int | None = None
@@ -92,7 +98,7 @@ def _format_risk_config(config: dict) -> dict:
         "max_daily_loss": float(config.get("max_daily_loss", 500000)),
         "signal_approval_mode": config.get("signal_approval_mode", "auto"),
         "initial_capital": float(config.get("initial_capital", 0)),
-        "min_rr_score": float(config.get("min_rr_score", 0.3)),
+        "min_composite_score": float(config.get("min_composite_score", 15)),
         "calibration_ceiling": float(config.get("calibration_ceiling", 2.0)),
         # Scanner settings
         "max_candidates": int(config.get("max_candidates", 25)),
@@ -106,6 +112,12 @@ def _format_risk_config(config: dict) -> dict:
         "max_buy_qty": int(config.get("max_buy_qty", 10)),
         "sector_max_pct": float(config.get("sector_max_pct", 40.0)),
         "min_hold_minutes": int(config.get("min_hold_minutes", 0)),
+        # Multi-factor weights
+        "weight_rr_ratio": float(config.get("weight_rr_ratio", 0.25)),
+        "weight_expert_consensus": float(config.get("weight_expert_consensus", 0.25)),
+        "weight_fundamental": float(config.get("weight_fundamental", 0.20)),
+        "weight_technical": float(config.get("weight_technical", 0.20)),
+        "weight_institutional": float(config.get("weight_institutional", 0.10)),
     }
 
 
