@@ -24,7 +24,7 @@ const DEFAULT_RISK: RiskConfig = {
   max_daily_loss: 500000,
   signal_approval_mode: 'manual',
   initial_capital: 10000000,
-  min_rr_score: 0.3,
+  min_composite_score: 15,
   max_candidates: 25,
   max_expert_stocks: 10,
   critic_check_dissent: true,
@@ -34,6 +34,11 @@ const DEFAULT_RISK: RiskConfig = {
   sector_max_pct: 40.0,
   calibration_ceiling: 2.0,
   min_hold_minutes: 0,
+  weight_rr_ratio: 0.25,
+  weight_expert_consensus: 0.25,
+  weight_fundamental: 0.20,
+  weight_technical: 0.20,
+  weight_institutional: 0.10,
 };
 
 export default function SettingsView({ settings, onSave, error, onBack }: Props) {
@@ -83,7 +88,7 @@ export default function SettingsView({ settings, onSave, error, onBack }: Props)
     riskForm.max_daily_loss !== riskBase.max_daily_loss ||
     riskForm.signal_approval_mode !== riskBase.signal_approval_mode ||
     riskForm.initial_capital !== riskBase.initial_capital ||
-    riskForm.min_rr_score !== riskBase.min_rr_score ||
+    riskForm.min_composite_score !== riskBase.min_composite_score ||
     riskForm.max_candidates !== riskBase.max_candidates ||
     riskForm.max_expert_stocks !== riskBase.max_expert_stocks ||
     riskForm.critic_check_dissent !== riskBase.critic_check_dissent ||
@@ -92,7 +97,12 @@ export default function SettingsView({ settings, onSave, error, onBack }: Props)
     riskForm.max_buy_qty !== riskBase.max_buy_qty ||
     riskForm.sector_max_pct !== riskBase.sector_max_pct ||
     riskForm.calibration_ceiling !== riskBase.calibration_ceiling ||
-    riskForm.min_hold_minutes !== riskBase.min_hold_minutes;
+    riskForm.min_hold_minutes !== riskBase.min_hold_minutes ||
+    riskForm.weight_rr_ratio !== riskBase.weight_rr_ratio ||
+    riskForm.weight_expert_consensus !== riskBase.weight_expert_consensus ||
+    riskForm.weight_fundamental !== riskBase.weight_fundamental ||
+    riskForm.weight_technical !== riskBase.weight_technical ||
+    riskForm.weight_institutional !== riskBase.weight_institutional;
 
   const handleSave = async () => {
     setSaving(true);
@@ -455,23 +465,23 @@ export default function SettingsView({ settings, onSave, error, onBack }: Props)
                 </div>
               </div>
 
-              {/* Min R/R score */}
+              {/* Min composite score */}
               <div className="setting-field">
                 <label className="setting-label">
-                  최소 R/R 스코어
-                  <span className="setting-hint">시그널 R/R 스코어가 이 값 미만이면 자동 거부됩니다</span>
+                  최소 복합 점수
+                  <span className="setting-hint">복합 점수가 이 값 미만이면 자동 거부됩니다 (0–100)</span>
                 </label>
                 <div className="token-input-row">
                   <input
                     type="range"
-                    min={0.1}
-                    max={3.0}
-                    step={0.05}
-                    value={riskForm.min_rr_score ?? 0.3}
-                    onChange={(e) => setRiskForm({ ...riskForm, min_rr_score: Number(e.target.value) })}
+                    min={0}
+                    max={50}
+                    step={1}
+                    value={riskForm.min_composite_score ?? 15}
+                    onChange={(e) => setRiskForm({ ...riskForm, min_composite_score: Number(e.target.value) })}
                     className="token-slider"
                   />
-                  <span className="token-value">{(riskForm.min_rr_score ?? 0.3).toFixed(2)}</span>
+                  <span className="token-value">{riskForm.min_composite_score ?? 15}%</span>
                 </div>
               </div>
 
@@ -479,7 +489,7 @@ export default function SettingsView({ settings, onSave, error, onBack }: Props)
               <div className="setting-field">
                 <label className="setting-label">
                   신뢰도 보정 기준값
-                  <span className="setting-hint">이 R/R 스코어를 신뢰도 100%로 매핑합니다 (높을수록 보수적)</span>
+                  <span className="setting-hint">R/R 서브스코어 정규화 기준값 (이 R/R 스코어 = 서브스코어 1.0)</span>
                 </label>
                 <div className="token-input-row">
                   <input
@@ -493,6 +503,108 @@ export default function SettingsView({ settings, onSave, error, onBack }: Props)
                   />
                   <span className="token-value">{(riskForm.calibration_ceiling ?? 2.0).toFixed(1)}</span>
                 </div>
+              </div>
+
+              {/* Multi-Factor Weights */}
+              <div style={{ fontSize: '0.85em', fontWeight: 600, color: 'var(--text-secondary, #666)', marginBottom: '12px', marginTop: '16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>복합 점수 가중치</div>
+
+              <div className="setting-field">
+                <label className="setting-label">
+                  R/R 비율
+                  <span className="setting-hint">시나리오 기반 위험/보상 비율</span>
+                </label>
+                <div className="token-input-row">
+                  <input
+                    type="range"
+                    min={0}
+                    max={0.5}
+                    step={0.05}
+                    value={riskForm.weight_rr_ratio ?? 0.25}
+                    onChange={(e) => setRiskForm({ ...riskForm, weight_rr_ratio: Number(e.target.value) })}
+                    className="token-slider"
+                  />
+                  <span className="token-value">{((riskForm.weight_rr_ratio ?? 0.25) * 100).toFixed(0)}%</span>
+                </div>
+              </div>
+
+              <div className="setting-field">
+                <label className="setting-label">
+                  전문가 합의
+                  <span className="setting-hint">전문가 패널 의견 일치도 + 신뢰도</span>
+                </label>
+                <div className="token-input-row">
+                  <input
+                    type="range"
+                    min={0}
+                    max={0.5}
+                    step={0.05}
+                    value={riskForm.weight_expert_consensus ?? 0.25}
+                    onChange={(e) => setRiskForm({ ...riskForm, weight_expert_consensus: Number(e.target.value) })}
+                    className="token-slider"
+                  />
+                  <span className="token-value">{((riskForm.weight_expert_consensus ?? 0.25) * 100).toFixed(0)}%</span>
+                </div>
+              </div>
+
+              <div className="setting-field">
+                <label className="setting-label">
+                  펀더멘털
+                  <span className="setting-hint">PER, ROE, 부채비율, 영업이익률</span>
+                </label>
+                <div className="token-input-row">
+                  <input
+                    type="range"
+                    min={0}
+                    max={0.5}
+                    step={0.05}
+                    value={riskForm.weight_fundamental ?? 0.20}
+                    onChange={(e) => setRiskForm({ ...riskForm, weight_fundamental: Number(e.target.value) })}
+                    className="token-slider"
+                  />
+                  <span className="token-value">{((riskForm.weight_fundamental ?? 0.20) * 100).toFixed(0)}%</span>
+                </div>
+              </div>
+
+              <div className="setting-field">
+                <label className="setting-label">
+                  기술적 모멘텀
+                  <span className="setting-hint">RSI, MACD, 거래량 추세</span>
+                </label>
+                <div className="token-input-row">
+                  <input
+                    type="range"
+                    min={0}
+                    max={0.5}
+                    step={0.05}
+                    value={riskForm.weight_technical ?? 0.20}
+                    onChange={(e) => setRiskForm({ ...riskForm, weight_technical: Number(e.target.value) })}
+                    className="token-slider"
+                  />
+                  <span className="token-value">{((riskForm.weight_technical ?? 0.20) * 100).toFixed(0)}%</span>
+                </div>
+              </div>
+
+              <div className="setting-field">
+                <label className="setting-label">
+                  기관/외국인 수급
+                  <span className="setting-hint">외국인/기관 순매수 추세</span>
+                </label>
+                <div className="token-input-row">
+                  <input
+                    type="range"
+                    min={0}
+                    max={0.5}
+                    step={0.05}
+                    value={riskForm.weight_institutional ?? 0.10}
+                    onChange={(e) => setRiskForm({ ...riskForm, weight_institutional: Number(e.target.value) })}
+                    className="token-slider"
+                  />
+                  <span className="token-value">{((riskForm.weight_institutional ?? 0.10) * 100).toFixed(0)}%</span>
+                </div>
+              </div>
+
+              <div style={{ fontSize: '0.8em', color: 'var(--text-tertiary, #999)', marginTop: '4px', marginBottom: '8px' }}>
+                합계: {(((riskForm.weight_rr_ratio ?? 0.25) + (riskForm.weight_expert_consensus ?? 0.25) + (riskForm.weight_fundamental ?? 0.20) + (riskForm.weight_technical ?? 0.20) + (riskForm.weight_institutional ?? 0.10)) * 100).toFixed(0)}% (저장 시 자동 정규화)
               </div>
 
               {/* Sector concentration */}
