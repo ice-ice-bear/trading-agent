@@ -124,6 +124,82 @@ def compute_data_quality_multiplier(confidence_grades: dict[str, str]) -> float:
     return sum(values) / len(values)
 
 
-def compute_composite_score(*args, **kwargs):
-    """Composite score aggregating all sub-scores. Added in Task 2."""
-    raise NotImplementedError("Added in Task 2")
+DEFAULT_WEIGHTS = {
+    "rr_ratio": 0.25,
+    "expert_consensus": 0.25,
+    "fundamental": 0.20,
+    "technical": 0.20,
+    "institutional": 0.10,
+}
+
+
+def normalize_weights(weights: dict[str, float]) -> dict[str, float]:
+    """Normalize weights to sum to 1.0."""
+    total = sum(weights.values())
+    if total <= 0:
+        return dict(DEFAULT_WEIGHTS)
+    return {k: v / total for k, v in weights.items()}
+
+
+def compute_composite_score(
+    rr_score: float,
+    calibration_ceiling: float = 2.0,
+    expert_analyses: list[dict] | None = None,
+    dart_financials: dict | None = None,
+    technicals: dict | None = None,
+    investor_trend: dict | None = None,
+    confidence_grades: dict[str, str] | None = None,
+    weights: dict[str, float] | None = None,
+) -> float:
+    """Compute multi-factor composite score (0–100).
+
+    Aggregates 5 sub-scores with configurable weights, then applies
+    a data quality multiplier.
+    """
+    w = normalize_weights(weights) if weights else dict(DEFAULT_WEIGHTS)
+
+    # 1. R/R ratio sub-score
+    rr_sub = score_rr_ratio(rr_score, ceiling=calibration_ceiling)
+
+    # 2. Expert consensus sub-score
+    expert_sub = score_expert_consensus(expert_analyses or [])
+
+    # 3. Fundamental quality sub-score
+    fins = dart_financials or {}
+    fundamental_sub = score_fundamental(
+        per=fins.get("per") or fins.get("dart_per"),
+        roe=fins.get("roe") or fins.get("dart_roe"),
+        debt_ratio=fins.get("debt_ratio") or fins.get("dart_debt_ratio"),
+        operating_margin=fins.get("operating_margin") or fins.get("dart_operating_margin"),
+    )
+
+    # 4. Technical momentum sub-score
+    tech = technicals or {}
+    macd_data = tech.get("macd") or {}
+    technical_sub = score_technical_momentum(
+        rsi=tech.get("rsi"),
+        macd_histogram=macd_data.get("histogram"),
+        macd_histogram_prev=macd_data.get("histogram_prev"),
+        volume_trend_pct=tech.get("volume_trend_pct"),
+    )
+
+    # 5. Institutional flow sub-score
+    trend = investor_trend or {}
+    institutional_sub = score_institutional_flow(
+        foreign_net=float(trend.get("foreign_net_buy", 0) or 0),
+        institution_net=float(trend.get("institution_net_buy", 0) or 0),
+    )
+
+    # Weighted sum
+    raw = (
+        w.get("rr_ratio", 0.25) * rr_sub
+        + w.get("expert_consensus", 0.25) * expert_sub
+        + w.get("fundamental", 0.20) * fundamental_sub
+        + w.get("technical", 0.20) * technical_sub
+        + w.get("institutional", 0.10) * institutional_sub
+    )
+
+    # Data quality multiplier
+    quality = compute_data_quality_multiplier(confidence_grades or {})
+
+    return min(max(raw * quality * 100, 0.0), 100.0)

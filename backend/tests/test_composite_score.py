@@ -127,3 +127,103 @@ class TestDataQualityMultiplier:
 
     def test_empty(self):
         assert compute_data_quality_multiplier({}) == 1.0
+
+
+class TestCompositeScore:
+    def test_default_weights(self):
+        score = compute_composite_score(
+            rr_score=1.0,
+            calibration_ceiling=2.0,
+            expert_analyses=[
+                {"view": "bullish", "confidence": 0.8},
+                {"view": "bullish", "confidence": 0.7},
+            ],
+            dart_financials={"per": 10.0, "roe": 15.0, "debt_ratio": 80.0, "operating_margin": 12.0},
+            technicals={"rsi": 55.0, "macd": {"histogram": 0.3}, "volume_trend_pct": 20.0},
+            investor_trend={"foreign_net_buy": 500_000_000, "institution_net_buy": 300_000_000},
+            confidence_grades={"current_price": "A", "volume": "A", "dart_revenue": "B"},
+        )
+        assert 0 < score <= 100
+
+    def test_all_perfect_scores(self):
+        score = compute_composite_score(
+            rr_score=2.0,
+            calibration_ceiling=2.0,
+            expert_analyses=[{"view": "bullish", "confidence": 1.0}] * 6,
+            dart_financials={"per": 5.0, "roe": 30.0, "debt_ratio": 10.0, "operating_margin": 25.0},
+            technicals={"rsi": 65.0, "macd": {"histogram": 1.0}, "volume_trend_pct": 80.0},
+            investor_trend={"foreign_net_buy": 5_000_000_000, "institution_net_buy": 5_000_000_000},
+            confidence_grades={"f1": "A", "f2": "A"},
+        )
+        assert score > 90
+
+    def test_all_worst_scores(self):
+        score = compute_composite_score(
+            rr_score=-1.0,
+            calibration_ceiling=2.0,
+            expert_analyses=[
+                {"view": "bullish", "confidence": 0.1},
+                {"view": "bearish", "confidence": 0.1},
+                {"view": "neutral", "confidence": 0.1},
+            ],
+            dart_financials={"per": 60.0, "roe": 1.0, "debt_ratio": 300.0, "operating_margin": 0.5},
+            technicals={"rsi": 85.0, "macd": {"histogram": -0.5}, "volume_trend_pct": -50.0},
+            investor_trend={"foreign_net_buy": -5_000_000_000, "institution_net_buy": -5_000_000_000},
+            confidence_grades={"f1": "D", "f2": "D"},
+        )
+        assert score < 15
+
+    def test_custom_weights(self):
+        weights = {
+            "rr_ratio": 0.5,
+            "expert_consensus": 0.1,
+            "fundamental": 0.1,
+            "technical": 0.1,
+            "institutional": 0.2,
+        }
+        score = compute_composite_score(
+            rr_score=2.0,
+            calibration_ceiling=2.0,
+            expert_analyses=[{"view": "neutral", "confidence": 0.3}],
+            weights=weights,
+        )
+        assert score > 40
+
+    def test_weights_auto_normalize(self):
+        weights = {
+            "rr_ratio": 1.0,
+            "expert_consensus": 1.0,
+            "fundamental": 1.0,
+            "technical": 1.0,
+            "institutional": 1.0,
+        }
+        score_equal = compute_composite_score(
+            rr_score=1.0,
+            calibration_ceiling=2.0,
+            expert_analyses=[{"view": "bullish", "confidence": 0.8}] * 4,
+            weights=weights,
+        )
+        score_default = compute_composite_score(
+            rr_score=1.0,
+            calibration_ceiling=2.0,
+            expert_analyses=[{"view": "bullish", "confidence": 0.8}] * 4,
+        )
+        assert 0 < score_equal <= 100
+        assert 0 < score_default <= 100
+
+    def test_missing_optional_data(self):
+        score = compute_composite_score(rr_score=0.5, calibration_ceiling=2.0)
+        assert 0 <= score <= 100
+
+    def test_empty_confidence_grades_no_penalty(self):
+        score_with = compute_composite_score(
+            rr_score=1.0,
+            calibration_ceiling=2.0,
+            confidence_grades={"f1": "A"},
+        )
+        score_without = compute_composite_score(
+            rr_score=1.0,
+            calibration_ceiling=2.0,
+            confidence_grades={},
+        )
+        assert score_without >= score_with
