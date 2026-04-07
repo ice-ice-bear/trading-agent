@@ -656,6 +656,91 @@ body {
   color: #9ca3af;
 }
 
+/* --- Horizon Badges --- */
+.horizon-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.72em;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.horizon-badge.short {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+}
+.horizon-badge.long {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+/* --- Re-evaluation Status --- */
+.reeval-dot {
+  font-size: 0.85em;
+  font-weight: 700;
+}
+.reeval-dot.hold {
+  color: #10b981;
+}
+.reeval-dot.caution {
+  color: #f59e0b;
+}
+.reeval-dot.sell {
+  color: #ef4444;
+}
+
+/* --- Stop-Loss Inline Edit --- */
+.stop-loss-value {
+  cursor: pointer;
+  padding: 1px 4px;
+  border-radius: 3px;
+  transition: background 0.15s;
+}
+.stop-loss-value:hover {
+  background: var(--color-bg-secondary, rgba(0,0,0,0.05));
+}
+.stop-loss-warning {
+  color: #ef4444;
+  font-weight: 600;
+}
+.stop-loss-reset {
+  margin-left: 4px;
+  cursor: pointer;
+  opacity: 0.5;
+  font-size: 0.85em;
+}
+.stop-loss-reset:hover {
+  opacity: 1;
+}
+.stop-loss-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.stop-loss-input {
+  width: 60px;
+  padding: 2px 4px;
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: 3px;
+  font-size: 0.85em;
+  text-align: right;
+  background: var(--color-bg-primary, #fff);
+  color: var(--color-text-primary);
+}
+.text-xs {
+  font-size: 0.7em;
+}
+
+/* --- ATR Stop Info (SignalCard) --- */
+.atr-stop-info {
+  font-size: 0.8em;
+  padding: 4px 8px;
+  margin: 4px 0;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.06);
+  color: var(--color-text-secondary);
+}
+
 /* --- Text Utilities --- */
 .text-muted {
   color: var(--color-text-secondary);

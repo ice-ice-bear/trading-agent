@@ -505,6 +505,64 @@ export default function SettingsView({ settings, onSave, error, onBack }: Props)
                 </div>
               </div>
 
+              {/* ATR Dynamic Stop-Loss */}
+              <div style={{ fontSize: '0.85em', fontWeight: 600, color: 'var(--text-secondary, #666)', marginBottom: '12px', marginTop: '16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ATR 동적 손절</div>
+
+              <div className="setting-field">
+                <label className="setting-label">
+                  단기 ATR 배수
+                  <span className="setting-hint">단기 추천 종목의 손절선 = ATR × 배수 (기본 2.0)</span>
+                </label>
+                <div className="token-input-row">
+                  <input
+                    type="range"
+                    min={1.0}
+                    max={5.0}
+                    step={0.5}
+                    value={riskForm.atr_stop_loss_multiplier_short ?? 2.0}
+                    onChange={(e) => setRiskForm({ ...riskForm, atr_stop_loss_multiplier_short: Number(e.target.value) })}
+                    className="token-slider"
+                  />
+                  <span className="token-value">×{(riskForm.atr_stop_loss_multiplier_short ?? 2.0).toFixed(1)}</span>
+                </div>
+              </div>
+
+              <div className="setting-field">
+                <label className="setting-label">
+                  장기 ATR 배수
+                  <span className="setting-hint">장기 추천 종목의 손절선 = ATR × 배수 (기본 3.0)</span>
+                </label>
+                <div className="token-input-row">
+                  <input
+                    type="range"
+                    min={1.0}
+                    max={5.0}
+                    step={0.5}
+                    value={riskForm.atr_stop_loss_multiplier_long ?? 3.0}
+                    onChange={(e) => setRiskForm({ ...riskForm, atr_stop_loss_multiplier_long: Number(e.target.value) })}
+                    className="token-slider"
+                  />
+                  <span className="token-value">×{(riskForm.atr_stop_loss_multiplier_long ?? 3.0).toFixed(1)}</span>
+                </div>
+              </div>
+
+              <div className="setting-field">
+                <label className="setting-label">
+                  포지션 재평가
+                  <span className="setting-hint">30분마다 보유 종목 지표 재평가 및 trailing stop 적용</span>
+                </label>
+                <div className="toggle-row">
+                  <button
+                    className={`toggle-btn ${riskForm.position_reeval_enabled !== false ? 'active' : ''}`}
+                    onClick={() => setRiskForm({ ...riskForm, position_reeval_enabled: true })}
+                  >활성화</button>
+                  <button
+                    className={`toggle-btn ${riskForm.position_reeval_enabled === false ? 'active' : ''}`}
+                    onClick={() => setRiskForm({ ...riskForm, position_reeval_enabled: false })}
+                  >비활성화</button>
+                </div>
+              </div>
+
               {/* Multi-Factor Weights */}
               <div style={{ fontSize: '0.85em', fontWeight: 600, color: 'var(--text-secondary, #666)', marginBottom: '12px', marginTop: '16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>복합 점수 가중치</div>
 

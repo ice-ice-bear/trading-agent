@@ -46,6 +46,10 @@ class RiskConfigUpdate(BaseModel):
     max_buy_qty: int | None = None
     sector_max_pct: float | None = None
     min_hold_minutes: int | None = None
+    # ATR dynamic stop-loss
+    atr_stop_loss_multiplier_short: float | None = None
+    atr_stop_loss_multiplier_long: float | None = None
+    position_reeval_enabled: bool | None = None
 
 
 @router.get("")
@@ -118,6 +122,10 @@ def _format_risk_config(config: dict) -> dict:
         "weight_fundamental": float(config.get("weight_fundamental", 0.20)),
         "weight_technical": float(config.get("weight_technical", 0.20)),
         "weight_institutional": float(config.get("weight_institutional", 0.10)),
+        # ATR dynamic stop-loss
+        "atr_stop_loss_multiplier_short": float(config.get("atr_stop_loss_multiplier_short", 2.0)),
+        "atr_stop_loss_multiplier_long": float(config.get("atr_stop_loss_multiplier_long", 3.0)),
+        "position_reeval_enabled": config.get("position_reeval_enabled", "true").lower() != "false",
     }
 
 
@@ -146,6 +154,65 @@ async def update_risk_config(body: RiskConfigUpdate):
     rows = await execute_query("SELECT key, value FROM risk_config")
     config = {row["key"]: row["value"] for row in rows} if rows else {}
     return _format_risk_config(config)
+
+
+class StockStopLossUpdate(BaseModel):
+    stop_loss_pct: float
+    take_profit_pct: float | None = None
+
+
+@router.get("/risk/stock-stop-loss")
+async def get_all_stock_stop_losses():
+    """Get all per-stock stop-loss overrides."""
+    rows = await execute_query(
+        "SELECT * FROM stock_stop_loss_overrides ORDER BY stock_code"
+    )
+    return {"overrides": rows or []}
+
+
+@router.put("/risk/stock-stop-loss/{stock_code}")
+async def update_stock_stop_loss(stock_code: str, body: StockStopLossUpdate):
+    """Manually override stop-loss for a stock."""
+    await execute_query(
+        """INSERT INTO stock_stop_loss_overrides (stock_code, stop_loss_pct, take_profit_pct, source)
+           VALUES (?, ?, ?, 'manual')
+           ON CONFLICT(stock_code) DO UPDATE SET
+               stop_loss_pct = excluded.stop_loss_pct,
+               take_profit_pct = COALESCE(excluded.take_profit_pct, take_profit_pct),
+               source = 'manual',
+               updated_at = datetime('now')""",
+        (stock_code, body.stop_loss_pct, body.take_profit_pct),
+    )
+    return {"stock_code": stock_code, "stop_loss_pct": body.stop_loss_pct, "source": "manual"}
+
+
+@router.delete("/risk/stock-stop-loss/{stock_code}")
+async def reset_stock_stop_loss(stock_code: str):
+    """Reset to auto-calculated stop-loss (remove manual override)."""
+    await execute_query(
+        "UPDATE stock_stop_loss_overrides SET source = 'auto', updated_at = datetime('now') WHERE stock_code = ?",
+        (stock_code,),
+    )
+    return {"stock_code": stock_code, "reset": True}
+
+
+@router.get("/risk/position-evaluations")
+async def get_position_evaluations(
+    stock_code: str = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
+):
+    """Get recent position re-evaluation history."""
+    if stock_code:
+        rows = await execute_query(
+            "SELECT * FROM position_evaluations WHERE stock_code = ? ORDER BY evaluated_at DESC LIMIT ?",
+            (stock_code, limit),
+        )
+    else:
+        rows = await execute_query(
+            "SELECT * FROM position_evaluations ORDER BY evaluated_at DESC LIMIT ?",
+            (limit,),
+        )
+    return {"evaluations": rows or []}
 
 
 @router.get("/{agent_id}")

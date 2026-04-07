@@ -133,6 +133,32 @@ export async function updateRiskConfig(
   return res.json();
 }
 
+// --- Per-stock Stop-Loss API ---
+
+export async function getStockStopLosses(): Promise<{ overrides: Record<string, unknown>[] }> {
+  const res = await fetch('/api/agents/risk/stock-stop-loss');
+  if (!res.ok) throw new Error('Failed to fetch stock stop-losses');
+  return res.json();
+}
+
+export async function updateStockStopLoss(
+  stockCode: string, stopLossPct: number, takeProfitPct?: number
+): Promise<Record<string, unknown>> {
+  const res = await fetch(`/api/agents/risk/stock-stop-loss/${stockCode}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ stop_loss_pct: stopLossPct, take_profit_pct: takeProfitPct }),
+  });
+  if (!res.ok) throw new Error('Failed to update stock stop-loss');
+  return res.json();
+}
+
+export async function resetStockStopLoss(stockCode: string): Promise<Record<string, unknown>> {
+  const res = await fetch(`/api/agents/risk/stock-stop-loss/${stockCode}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to reset stock stop-loss');
+  return res.json();
+}
+
 // --- Agent API ---
 
 export async function getAgents(): Promise<{ agents: import('../types').Agent[] }> {

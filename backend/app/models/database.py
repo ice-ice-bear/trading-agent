@@ -251,6 +251,30 @@ CREATE TABLE IF NOT EXISTS memo_exports (
     file_path TEXT,
     created_at TEXT DEFAULT (datetime('now'))
 );
+
+-- Phase 5: Per-stock dynamic stop-loss
+CREATE TABLE IF NOT EXISTS stock_stop_loss_overrides (
+    stock_code TEXT PRIMARY KEY,
+    stop_loss_pct REAL NOT NULL,
+    take_profit_pct REAL,
+    atr_value REAL,
+    atr_multiplier REAL DEFAULT 2.0,
+    investment_horizon TEXT DEFAULT 'short',
+    source TEXT DEFAULT 'auto',
+    updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Phase 5: Position re-evaluation history
+CREATE TABLE IF NOT EXISTS position_evaluations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    stock_code TEXT NOT NULL,
+    evaluated_at TEXT DEFAULT (datetime('now')),
+    new_status TEXT NOT NULL,
+    reason TEXT,
+    indicators_json TEXT,
+    new_stop_loss_pct REAL
+);
+CREATE INDEX IF NOT EXISTS idx_position_eval_stock ON position_evaluations(stock_code);
 """
 
 # Default risk configuration values
@@ -262,6 +286,9 @@ DEFAULT_RISK_CONFIG = {
     "max_daily_loss": "500000",
     "signal_approval_mode": "auto",
     "min_rr_score": "2.0",
+    "atr_stop_loss_multiplier_short": "2.0",
+    "atr_stop_loss_multiplier_long": "3.0",
+    "position_reeval_enabled": "true",
 }
 
 # Default scheduled tasks
@@ -291,6 +318,13 @@ DEFAULT_TASKS = [
         "name": "afternoon_scan",
         "agent_id": "market_scanner",
         "cron_expression": "0 14 * * 1-5",  # 14:00 — late-day momentum before close
+        "enabled": 1,
+        "config_json": "{}",
+    },
+    {
+        "name": "position_reeval",
+        "agent_id": "position_revaluator",
+        "cron_expression": "*/30 9-15 * * 1-5",
         "enabled": 1,
         "config_json": "{}",
     },

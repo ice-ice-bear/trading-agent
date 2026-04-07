@@ -45,6 +45,8 @@ interface SignalMetadata {
   news_summary?: NewsSummary;
   peer_comparison?: PeerComparisonData;
   dcf_valuation?: DCFValuation;
+  reason?: string;
+  failed_fields?: string[];
 }
 
 interface SignalCardProps {
@@ -57,6 +59,14 @@ interface SignalCardProps {
 
 const directionColor = (d: string) =>
   d === 'buy' ? '#16a34a' : d === 'sell' ? '#dc3545' : '#6c757d';
+
+const FIELD_LABELS: Record<string, string> = {
+  current_price: '현재가',
+  volume: '거래량',
+  dart_revenue: '매출액(DART)',
+  dart_operating_profit: '영업이익(DART)',
+  dart_per: 'PER(DART)',
+};
 
 export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onReject, acting, defaultExpanded }) => {
   const [expanded, setExpanded] = useState(defaultExpanded ?? false);
@@ -98,8 +108,59 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, onApprove, onRej
               {overallGrade}등급
             </span>
           )}
+          {signal.investment_horizon && (
+            <span className={`horizon-badge ${signal.investment_horizon}`}>
+              {signal.investment_horizon === 'long' ? '장기' : '단기'}
+            </span>
+          )}
         </div>
       </div>
+
+      {/* ATR Stop-Loss info */}
+      {signal.atr_stop_loss_pct != null && (
+        <div className="atr-stop-info">
+          ATR 손절선 <strong>{signal.atr_stop_loss_pct.toFixed(1)}%</strong>
+          {signal.investment_horizon && (
+            <span className="text-muted"> ({signal.investment_horizon === 'long' ? '장기 ×3' : '단기 ×2'})</span>
+          )}
+        </div>
+      )}
+
+      {/* Failed gate notice */}
+      {signal.status === 'failed' && !scenarios && meta?.reason === 'confidence_gate' && (
+        <div style={{
+          padding: 'var(--space-3)',
+          margin: 'var(--space-2) 0',
+          background: 'var(--color-bg-secondary, #f8f9fa)',
+          borderRadius: 'var(--radius-md, 6px)',
+          border: '1px solid var(--color-border-light, var(--color-border))',
+          fontSize: 'var(--text-sm)',
+          color: 'var(--color-text-secondary)',
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: 'var(--space-1)' }}>
+            분석 미완료 — 필수 데이터 부족
+          </div>
+          {meta.failed_fields && meta.failed_fields.length > 0 && (
+            <div style={{ fontSize: 'var(--text-xs)' }}>
+              누락 항목: {meta.failed_fields.map(f => FIELD_LABELS[f] || f).join(', ')}
+            </div>
+          )}
+        </div>
+      )}
+
+      {signal.status === 'failed' && !scenarios && !meta?.reason && (
+        <div style={{
+          padding: 'var(--space-3)',
+          margin: 'var(--space-2) 0',
+          background: 'var(--color-bg-secondary, #f8f9fa)',
+          borderRadius: 'var(--radius-md, 6px)',
+          border: '1px solid var(--color-border-light, var(--color-border))',
+          fontSize: 'var(--text-sm)',
+          color: 'var(--color-text-secondary)',
+        }}>
+          분석 중 오류가 발생하여 신호가 생성되지 않았습니다.
+        </div>
+      )}
 
       {/* Scenarios */}
       {scenarios && (

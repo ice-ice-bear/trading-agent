@@ -120,7 +120,7 @@ export default function DashboardView() {
       <div className="dashboard-grid">
         <div className="dashboard-main">
           <PortfolioSummary data={portfolio} loading={loading} />
-          <PositionsTable positions={portfolio?.positions ?? []} />
+          <PositionsTable positions={portfolio?.positions ?? []} onRefresh={fetchCoreData} />
           <PerformanceChart refreshTrigger={portfolioTrigger} />
           <SignalPanel refreshTrigger={signalTrigger} />
           <OrderHistory refreshTrigger={orderTrigger} />

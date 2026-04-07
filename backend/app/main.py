@@ -23,6 +23,7 @@ async def _init_agents():
     from app.agents.event_bus import event_bus
     from app.agents.market_scanner import MarketScannerAgent
     from app.agents.portfolio_monitor import PortfolioMonitorAgent
+    from app.agents.position_revaluator import PositionRevaluatorAgent
     from app.agents.risk_manager import RiskManagerAgent
     from app.agents.report_generator import ReportGeneratorAgent
     from app.agents.trading_executor import TradingExecutorAgent
@@ -34,6 +35,7 @@ async def _init_agents():
     agent_engine.register(MarketScannerAgent())
     agent_engine.register(TradingExecutorAgent())
     agent_engine.register(ReportGeneratorAgent())
+    agent_engine.register(PositionRevaluatorAgent())
 
     # Wire WebSocket manager to receive all events
     event_bus.subscribe_all(ws_manager.on_agent_event)

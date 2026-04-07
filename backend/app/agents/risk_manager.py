@@ -66,12 +66,27 @@ class RiskManagerAgent(BaseAgent):
         risk_config = await self._load_risk_config()
         await self._check_position_thresholds(positions, risk_config)
 
+    async def _get_stock_thresholds(
+        self, stock_code: str, global_stop: float, global_tp: float
+    ) -> tuple[float, float]:
+        """Get per-stock stop-loss/take-profit, falling back to global."""
+        row = await execute_query(
+            "SELECT stop_loss_pct, take_profit_pct FROM stock_stop_loss_overrides WHERE stock_code = ?",
+            (stock_code,),
+            fetch_one=True,
+        )
+        if row:
+            sl = float(row["stop_loss_pct"]) if row.get("stop_loss_pct") is not None else global_stop
+            tp = float(row["take_profit_pct"]) if row.get("take_profit_pct") is not None else global_tp
+            return sl, tp
+        return global_stop, global_tp
+
     async def _check_position_thresholds(
         self, positions: list[dict], risk_config: dict
     ) -> list[dict]:
-        """Check positions against risk thresholds and emit events."""
-        stop_loss_pct = float(risk_config.get("stop_loss_pct", -3.0))
-        take_profit_pct = float(risk_config.get("take_profit_pct", 5.0))
+        """Check positions against per-stock or global risk thresholds."""
+        global_stop = float(risk_config.get("stop_loss_pct", -3.0))
+        global_tp = float(risk_config.get("take_profit_pct", 5.0))
         alerts = []
 
         for pos in positions:
@@ -79,7 +94,11 @@ class RiskManagerAgent(BaseAgent):
             stock_code = pos.get("stock_code", "")
             stock_name = pos.get("stock_name", "")
 
-            if pnl_pct <= stop_loss_pct:
+            effective_stop, effective_tp = await self._get_stock_thresholds(
+                stock_code, global_stop, global_tp
+            )
+
+            if pnl_pct <= effective_stop:
                 event_key = (stock_code, "stop_loss")
                 if event_key in self._emitted_risk_events:
                     logger.debug(
@@ -91,18 +110,18 @@ class RiskManagerAgent(BaseAgent):
                     "stock_code": stock_code,
                     "stock_name": stock_name,
                     "pnl_pct": pnl_pct,
-                    "threshold": stop_loss_pct,
+                    "threshold": effective_stop,
                     "quantity": pos.get("quantity", 0),
                 }
                 alerts.append(alert)
                 self._emitted_risk_events.add(event_key)
                 logger.warning(
                     f"STOP-LOSS: {stock_name}({stock_code}) at {pnl_pct:.2f}% "
-                    f"(threshold: {stop_loss_pct}%)"
+                    f"(threshold: {effective_stop}%)"
                 )
                 await self.emit_event("risk.stop_loss", alert)
 
-            elif pnl_pct >= take_profit_pct:
+            elif pnl_pct >= effective_tp:
                 event_key = (stock_code, "take_profit")
                 if event_key in self._emitted_risk_events:
                     logger.debug(
@@ -114,14 +133,14 @@ class RiskManagerAgent(BaseAgent):
                     "stock_code": stock_code,
                     "stock_name": stock_name,
                     "pnl_pct": pnl_pct,
-                    "threshold": take_profit_pct,
+                    "threshold": effective_tp,
                     "quantity": pos.get("quantity", 0),
                 }
                 alerts.append(alert)
                 self._emitted_risk_events.add(event_key)
                 logger.info(
                     f"TAKE-PROFIT: {stock_name}({stock_code}) at {pnl_pct:.2f}% "
-                    f"(threshold: {take_profit_pct}%)"
+                    f"(threshold: {effective_tp}%)"
                 )
                 await self.emit_event("risk.take_profit", alert)
 

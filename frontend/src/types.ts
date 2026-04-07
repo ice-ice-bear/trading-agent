@@ -57,6 +57,10 @@ export interface RiskConfig {
   weight_fundamental?: number;
   weight_technical?: number;
   weight_institutional?: number;
+  // ATR dynamic stop-loss
+  atr_stop_loss_multiplier_short?: number;
+  atr_stop_loss_multiplier_long?: number;
+  position_reeval_enabled?: boolean;
 }
 
 // Dashboard types
@@ -79,6 +83,10 @@ export interface Position {
   market_value: number;
   unrealized_pnl: number;
   unrealized_pnl_pct: number;
+  stop_loss_pct?: number;
+  stop_loss_source?: 'auto' | 'manual' | 'global';
+  investment_horizon?: 'short' | 'long' | null;
+  reeval_status?: 'hold' | 'caution' | 'sell' | null;
 }
 
 export interface Order {
@@ -135,6 +143,8 @@ export interface Signal {
   critic_result?: string;
   dart_fundamentals?: DartFundamentals;
   metadata?: Record<string, unknown>;
+  investment_horizon?: 'short' | 'long' | null;
+  atr_stop_loss_pct?: number | null;
 }
 
 export interface Agent {

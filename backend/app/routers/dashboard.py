@@ -35,6 +35,7 @@ async def get_portfolio():
     total_pnl_pct = round((total_pnl / initial_capital * 100), 2) if initial_capital > 0 else 0.0
 
     positions = await portfolio_service.get_latest_positions()
+    await _enrich_positions_with_stop_loss(positions)
     return {
         "total_value": total_value,
         "cash_balance": snapshot["cash_balance"],
@@ -55,9 +56,45 @@ async def get_portfolio_history(hours: int = Query(default=24, ge=1, le=720)):
 
 @router.get("/positions")
 async def get_positions():
-    """Get positions from the latest snapshot."""
+    """Get positions from the latest snapshot, enriched with per-stock stop-loss."""
     positions = await portfolio_service.get_latest_positions()
+    await _enrich_positions_with_stop_loss(positions)
     return {"positions": positions}
+
+
+async def _enrich_positions_with_stop_loss(positions: list[dict]) -> None:
+    """Add stop_loss_pct, stop_loss_source, investment_horizon, reeval_status to each position."""
+    if not positions:
+        return
+    from app.models.db import execute_query
+
+    # Load global default + all overrides in bulk (max 5 positions)
+    config_row = await execute_query("SELECT value FROM risk_config WHERE key = 'stop_loss_pct'", fetch_one=True)
+    global_stop = float(config_row["value"]) if config_row else -3.0
+
+    override_rows = await execute_query(
+        "SELECT stock_code, stop_loss_pct, source, investment_horizon FROM stock_stop_loss_overrides"
+    )
+    overrides = {r["stock_code"]: r for r in (override_rows or [])}
+
+    eval_rows = await execute_query(
+        """SELECT stock_code, new_status FROM position_evaluations
+           WHERE id IN (SELECT MAX(id) FROM position_evaluations GROUP BY stock_code)"""
+    )
+    evals = {r["stock_code"]: r["new_status"] for r in (eval_rows or [])}
+
+    for pos in positions:
+        code = pos.get("stock_code", "")
+        ov = overrides.get(code)
+        if ov:
+            pos["stop_loss_pct"] = float(ov["stop_loss_pct"])
+            pos["stop_loss_source"] = ov["source"]
+            pos["investment_horizon"] = ov.get("investment_horizon", "short")
+        else:
+            pos["stop_loss_pct"] = global_stop
+            pos["stop_loss_source"] = "global"
+            pos["investment_horizon"] = None
+        pos["reeval_status"] = evals.get(code)
 
 
 @router.get("/orders")

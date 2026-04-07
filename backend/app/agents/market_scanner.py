@@ -12,7 +12,7 @@ from app.agents.signal_critic import signal_critic
 from app.models.confidence import check_hard_gate
 from app.models.signal import compute_rr_score
 from app.models.composite_score import compute_composite_score
-from app.models.db import execute_insert, load_risk_config
+from app.models.db import execute_insert, execute_query, load_risk_config
 from app.services.dart_client import dart_client
 from app.services.market_service import (
     get_batch_charts,
@@ -27,6 +27,46 @@ logger = logging.getLogger(__name__)
 # 후보군 최대 종목 수 기본값 (Stage 2 차트 수집 대상)
 DEFAULT_MAX_CANDIDATES = 25
 DEFAULT_MAX_EXPERT_STOCKS = 10
+
+
+def compute_atr_stop_loss_pct(atr: float, price: float, multiplier: float) -> float:
+    """ATR 기반 동적 손절율 계산. 반환값은 음수(%)."""
+    if price <= 0 or atr <= 0:
+        return -3.0  # fallback
+    return -round((atr * multiplier) / price * 100, 2)
+
+
+def determine_investment_horizon(
+    indicators: dict, dart_financials: dict | None
+) -> str:
+    """기술 지표 + 펀더멘탈로 장기/단기 투자 기간 판단.
+
+    4개 조건 중 3개 이상 충족 시 'long', 아니면 'short'.
+    """
+    long_signals = 0
+
+    # 1. MA 정배열 (5 > 20 > 60)
+    if indicators.get("ma_alignment") == "bullish":
+        long_signals += 1
+
+    # 2. RSI 40-65 (과매수 아닌 건강한 상승 추세)
+    rsi = indicators.get("rsi_14")
+    if rsi and 40 < rsi < 65:
+        long_signals += 1
+
+    # 3. 펀더멘탈 양호 (PER < 20, ROE > 10)
+    if dart_financials:
+        per = dart_financials.get("per") or dart_financials.get("dart_per")
+        roe = dart_financials.get("roe") or dart_financials.get("dart_roe")
+        if per and 0 < per < 20 and roe and roe > 10:
+            long_signals += 1
+
+    # 4. MACD bullish cross 또는 양의 histogram
+    macd = indicators.get("macd")
+    if macd and (macd.get("cross") == "bullish" or (macd.get("histogram") or 0) > 0):
+        long_signals += 1
+
+    return "long" if long_signals >= 3 else "short"
 
 
 class MarketScannerAgent(BaseAgent):
@@ -225,6 +265,26 @@ class MarketScannerAgent(BaseAgent):
         # Update data_package with dart_financials for the 5th expert
         data_package["dart_financials"] = dart_financials
 
+        # --- Stage 2.8: Overbought + volume collapse filter ---
+        stoch = indicators.get("stochastic") or {}
+        stoch_k = stoch.get("k")
+        vol_change_5d = indicators.get("volume_change_5d_pct")
+        overbought_threshold = float(self._risk_config.get("overbought_stoch_k", "80"))
+        vol_collapse_threshold = float(self._risk_config.get("vol_collapse_pct", "-50"))
+
+        if (
+            stoch_k is not None
+            and vol_change_5d is not None
+            and stoch_k > overbought_threshold
+            and vol_change_5d < vol_collapse_threshold
+        ):
+            logger.info(
+                f"OVERBOUGHT+VOL_COLLAPSE filter: {stock_code} {stock_name} "
+                f"Stoch K={stoch_k:.1f}>{overbought_threshold}, "
+                f"Vol5d={vol_change_5d:.1f}%<{vol_collapse_threshold}% → skip"
+            )
+            return None
+
         # Enrich data_package with all collected data before expert panel
         data_package["confidence_grades"] = confidence_grades
         # Create compact DART summary for non-fundamental experts
@@ -353,6 +413,17 @@ class MarketScannerAgent(BaseAgent):
             weights=factor_weights,
         )
 
+        # --- Stage 5.5: Investment horizon + ATR-based stop-loss ---
+        investment_horizon = determine_investment_horizon(indicators, dart_financials)
+        atr_14 = indicators.get("atr_14")
+        multiplier_key = f"atr_stop_loss_multiplier_{investment_horizon}"
+        atr_multiplier = float(self._risk_config.get(multiplier_key, "2.0"))
+        atr_stop_loss_pct = (
+            compute_atr_stop_loss_pct(atr_14, current_price, atr_multiplier)
+            if atr_14 and current_price > 0
+            else None
+        )
+
         # --- Stage 6: Persist signal and emit ---
         scenarios_json_str = json.dumps({
             "bull": signal_analysis.bull.model_dump(),
@@ -366,8 +437,9 @@ class MarketScannerAgent(BaseAgent):
             """INSERT INTO signals
                (agent_id, stock_code, stock_name, direction, confidence, reason, status,
                 scenarios_json, variant_view, rr_score, current_price, expert_stances_json,
-                dart_fundamentals_json, metadata_json, critic_result, confidence_grades_json)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                dart_fundamentals_json, metadata_json, critic_result, confidence_grades_json,
+                investment_horizon, atr_stop_loss_pct)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 self.agent_id,
                 stock_code,
@@ -385,8 +457,25 @@ class MarketScannerAgent(BaseAgent):
                 json.dumps(metadata, ensure_ascii=False),
                 "pass",
                 json.dumps(confidence_grades),
+                investment_horizon,
+                atr_stop_loss_pct,
             ),
         )
+
+        # Upsert per-stock stop-loss override (preserve manual overrides)
+        if atr_stop_loss_pct is not None and signal_analysis.direction.lower() == "buy":
+            await execute_query(
+                """INSERT INTO stock_stop_loss_overrides
+                   (stock_code, stop_loss_pct, atr_value, atr_multiplier, investment_horizon, source)
+                   VALUES (?, ?, ?, ?, ?, 'auto')
+                   ON CONFLICT(stock_code) DO UPDATE SET
+                       stop_loss_pct = CASE WHEN source = 'manual' THEN stop_loss_pct ELSE excluded.stop_loss_pct END,
+                       atr_value = excluded.atr_value,
+                       atr_multiplier = excluded.atr_multiplier,
+                       investment_horizon = excluded.investment_horizon,
+                       updated_at = datetime('now')""",
+                (stock_code, atr_stop_loss_pct, atr_14, atr_multiplier, investment_horizon),
+            )
 
         # Save signal snapshot for history tracking
         from app.services.signal_history_service import save_signal_snapshot

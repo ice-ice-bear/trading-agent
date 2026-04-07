@@ -17,7 +17,7 @@ class TradingExecutorAgent(BaseAgent):
     allowed_tools = ["domestic_stock"]
 
     # Events this agent subscribes to
-    subscribed_events = ["signal.approved", "risk.stop_loss", "risk.take_profit"]
+    subscribed_events = ["signal.approved", "risk.stop_loss", "risk.take_profit", "reeval.sell_recommended"]
 
     async def execute(self, context: AgentContext) -> AgentResult:
         """Manual execution — not typically used directly."""
@@ -34,6 +34,8 @@ class TradingExecutorAgent(BaseAgent):
             await self._execute_stop_loss(event)
         elif event.event_type == "risk.take_profit":
             await self._execute_take_profit(event)
+        elif event.event_type == "reeval.sell_recommended":
+            await self._execute_reeval_sell(event)
 
     async def _execute_signal(self, event: AgentEvent) -> None:
         """Execute an approved trading signal."""
@@ -217,4 +219,22 @@ class TradingExecutorAgent(BaseAgent):
             stock_name=stock_name,
             quantity=quantity,
             reason=f"익절매: {pnl_pct:.2f}% 수익",
+        )
+
+    async def _execute_reeval_sell(self, event: AgentEvent) -> None:
+        """Execute sell from position re-evaluation recommendation."""
+        stock_code = event.data.get("stock_code", "")
+        stock_name = event.data.get("stock_name", "")
+        quantity = event.data.get("quantity", 0)
+        reason = event.data.get("reason", "재평가 매도")
+
+        logger.warning(
+            f"REEVAL SELL: Selling {quantity}x {stock_name}({stock_code}) — {reason}"
+        )
+
+        await self._execute_sell(
+            stock_code=stock_code,
+            stock_name=stock_name,
+            quantity=quantity,
+            reason=reason,
         )

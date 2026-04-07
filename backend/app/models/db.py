@@ -40,6 +40,8 @@ async def init_database() -> None:
             "ALTER TABLE signals ADD COLUMN metadata_json TEXT",
             "ALTER TABLE signals ADD COLUMN critic_result TEXT",
             "ALTER TABLE signals ADD COLUMN confidence_grades_json TEXT",
+            "ALTER TABLE signals ADD COLUMN investment_horizon TEXT",
+            "ALTER TABLE signals ADD COLUMN atr_stop_loss_pct REAL",
         ]
         for stmt in _ALTER_STATEMENTS:
             try:
@@ -91,6 +93,17 @@ async def init_database() -> None:
                                metadata_json, critic_result, confidence_grades_json
                         FROM signals_old
                     """)
+                    # Recreate orders to fix FK reference (RENAME causes FK to follow old table name)
+                    orders_schema = await db.execute(
+                        "SELECT sql FROM sqlite_master WHERE type='table' AND name='orders'"
+                    )
+                    orders_row = await orders_schema.fetchone()
+                    if orders_row and "signals_old" in (orders_row[0] or ""):
+                        logger.info("Fixing orders FK reference from signals_old → signals...")
+                        await db.execute("ALTER TABLE orders RENAME TO _orders_tmp")
+                        await db.executescript(SCHEMA)  # recreates orders with correct FK
+                        await db.execute("INSERT INTO orders SELECT * FROM _orders_tmp")
+                        await db.execute("DROP TABLE _orders_tmp")
                     await db.execute("DROP TABLE signals_old")
                     logger.info("Signals table migration complete.")
         except Exception as e:

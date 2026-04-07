@@ -60,10 +60,12 @@ def score_technical_momentum(
     macd_histogram: float | None = None,
     macd_histogram_prev: float | None = None,
     volume_trend_pct: float | None = None,
+    stochastic_k: float | None = None,
 ) -> float:
     """Score technical momentum from indicators.
 
-    RSI, MACD histogram direction, and volume trend each produce a 0–1 score.
+    RSI, MACD histogram direction, volume trend, and Stochastic %K each produce
+    a 0–1 score.
     """
     scores: list[float] = []
 
@@ -95,6 +97,16 @@ def score_technical_momentum(
             scores.append(0.2 + (volume_trend_pct + 30) / 30.0 * 0.3)
         else:
             scores.append(0.2)
+
+    if stochastic_k is not None:
+        if stochastic_k > 80:
+            scores.append(0.2)   # overbought penalty
+        elif stochastic_k >= 50:
+            scores.append(0.5 + (stochastic_k - 50) / 30.0 * 0.3)
+        elif stochastic_k >= 20:
+            scores.append(0.3 + (stochastic_k - 20) / 30.0 * 0.2)
+        else:
+            scores.append(0.5)   # oversold — potential reversal
 
     return sum(scores) / len(scores) if scores else 0.5
 
@@ -176,11 +188,13 @@ def compute_composite_score(
     # 4. Technical momentum sub-score
     tech = technicals or {}
     macd_data = tech.get("macd") or {}
+    stoch_data = tech.get("stochastic") or {}
     technical_sub = score_technical_momentum(
-        rsi=tech.get("rsi"),
+        rsi=tech.get("rsi_14") or tech.get("rsi"),
         macd_histogram=macd_data.get("histogram"),
         macd_histogram_prev=macd_data.get("histogram_prev"),
-        volume_trend_pct=tech.get("volume_trend_pct"),
+        volume_trend_pct=tech.get("volume_change_5d_pct") or tech.get("volume_trend_pct"),
+        stochastic_k=stoch_data.get("k"),
     )
 
     # 5. Institutional flow sub-score
