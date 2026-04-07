@@ -49,6 +49,7 @@ export default function OrderHistory({ refreshTrigger }: Props) {
             <th className="text-right">주문가</th>
             <th className="text-right">체결가</th>
             <th>상태</th>
+            <th>사유</th>
           </tr>
         </thead>
         <tbody>
@@ -79,6 +80,24 @@ export default function OrderHistory({ refreshTrigger }: Props) {
                 <span className={`badge status-${order.status}`}>{order.status}</span>
                 {order.signal_id && (
                   <span className="signal-link" title={`Signal #${order.signal_id}`}>S</span>
+                )}
+              </td>
+              <td>
+                {order.reason ? (
+                  <span
+                    className={`badge ${
+                      order.reason.startsWith('손절') ? 'badge-stop-loss' :
+                      order.reason.startsWith('익절') ? 'badge-take-profit' :
+                      'badge-neutral'
+                    }`}
+                    title={order.reason}
+                  >
+                    {order.reason.startsWith('손절') ? '손절' :
+                     order.reason.startsWith('익절') ? '익절' :
+                     order.reason.length > 10 ? order.reason.slice(0, 10) + '…' : order.reason}
+                  </span>
+                ) : (
+                  <span className="text-muted">-</span>
                 )}
               </td>
             </tr>

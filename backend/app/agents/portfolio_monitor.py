@@ -119,12 +119,28 @@ class PortfolioMonitorAgent(BaseAgent):
         except (json.JSONDecodeError, TypeError, ValueError) as e:
             logger.warning(f"Balance parse partial failure: {e}, raw: {str(balance_raw)[:500]}")
 
-        # Recompute total_value from positions + cash when positions exist.
-        # When positions = 0, preserve tot_evlu_amt from KIS (do NOT overwrite
-        # with dnca_tot_amt which is T+2-lagged settled-only cash).
+        # Fallback to last *valid* snapshot when KIS API returns garbage (parse failure → all zeros)
+        if total_value == 0 and cash_balance == 0 and not positions:
+            prev = await execute_query(
+                "SELECT total_value, cash_balance FROM portfolio_snapshots WHERE total_value > 0 ORDER BY id DESC LIMIT 1"
+            )
+            if prev:
+                total_value = prev[0]["total_value"]
+                cash_balance = prev[0]["cash_balance"]
+                logger.warning(
+                    "KIS returned empty balance — using last valid snapshot: total_value=%s",
+                    total_value,
+                )
+
+        # When positions exist, KIS nxdy_excc_amt/dnca_tot_amt reflect
+        # pre-settlement cash (T+2) and do NOT subtract unsettled purchases.
+        # Trust tot_evlu_amt from KIS as the real total, and derive cash by
+        # subtracting position market values to avoid double-counting.
         if positions:
             total_market = sum(p.get("market_value", 0) for p in positions)
-            if total_market > 0:
+            if total_value > 0 and total_market > 0:
+                cash_balance = total_value - total_market
+            elif total_market > 0:
                 total_value = total_market + cash_balance
         elif total_value == 0 and cash_balance > 0:
             # Fallback only when KIS returned no tot_evlu_amt at all

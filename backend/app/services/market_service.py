@@ -280,9 +280,9 @@ async def get_investor_trend(stock_code: str, days: int = 20) -> dict[str, Any]:
         raw = await mcp_manager.call_tool("domestic_stock", {
             "api_type": "inquire_investor",
             "params": {
+                "env_dv": "demo",
+                "fid_cond_mrkt_div_code": "J",
                 "fid_input_iscd": stock_code,
-                "fid_input_date_1": (datetime.now() - timedelta(days=days)).strftime("%Y%m%d"),
-                "fid_input_date_2": datetime.now().strftime("%Y%m%d"),
             },
         })
         data = _unwrap_mcp_response(raw)
@@ -290,8 +290,8 @@ async def get_investor_trend(stock_code: str, days: int = 20) -> dict[str, Any]:
             return {"foreign_net_buy": 0, "institution_net_buy": 0, "foreign_holding_pct": None}
 
         items = data if isinstance(data, list) else data.get("output", []) if isinstance(data, dict) else []
-        foreign_total = sum(int(item.get("frgn_ntby_qty", 0)) for item in items if isinstance(item, dict))
-        inst_total = sum(int(item.get("orgn_ntby_qty", 0)) for item in items if isinstance(item, dict))
+        foreign_total = sum(int(v) for item in items if isinstance(item, dict) for v in [item.get("frgn_ntby_qty")] if v not in (None, ""))
+        inst_total = sum(int(v) for item in items if isinstance(item, dict) for v in [item.get("orgn_ntby_qty")] if v not in (None, ""))
 
         return {
             "foreign_net_buy": foreign_total,
