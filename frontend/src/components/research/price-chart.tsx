@@ -12,20 +12,22 @@ export default function PriceChart({ stockCode }: PriceChartProps) {
   useEffect(() => {
     if (!containerRef.current) return
 
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+
     const chart = createChart(containerRef.current, {
       width: containerRef.current.clientWidth,
       height: 240,
       layout: {
         background: { color: 'transparent' },
-        textColor: '#64748b',
+        textColor: isDark ? '#94a3b8' : '#64748b',
         fontSize: 11,
       },
       grid: {
-        vertLines: { color: 'rgba(0,0,0,0.04)' },
-        horzLines: { color: 'rgba(0,0,0,0.04)' },
+        vertLines: { color: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' },
+        horzLines: { color: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' },
       },
-      timeScale: { borderColor: '#e5e7eb' },
-      rightPriceScale: { borderColor: '#e5e7eb' },
+      timeScale: { borderColor: isDark ? '#2d3348' : '#e5e7eb' },
+      rightPriceScale: { borderColor: isDark ? '#2d3348' : '#e5e7eb' },
     })
     chartRef.current = chart
 

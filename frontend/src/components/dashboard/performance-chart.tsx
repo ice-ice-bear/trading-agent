@@ -13,6 +13,7 @@ interface PerfData {
 export default function PerformanceChart() {
   const [period, setPeriod] = useState<Period>('1W')
   const [data, setData] = useState<PerfData[]>([])
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
 
   useEffect(() => {
     fetch(`/api/dashboard/performance?period=${period.toLowerCase()}`)
@@ -54,7 +55,14 @@ export default function PerformanceChart() {
             </defs>
             <XAxis dataKey="date" hide />
             <YAxis hide domain={['auto', 'auto']} />
-            <Tooltip contentStyle={{ fontSize: 12, borderRadius: 6 }} />
+            <Tooltip contentStyle={{
+              fontSize: 12,
+              borderRadius: 6,
+              background: isDark ? '#1a1b26' : '#fff',
+              border: '1px solid',
+              borderColor: isDark ? '#2d3348' : '#e5e7eb',
+              color: isDark ? '#e2e8f0' : '#0f172a',
+            }} />
             <Area
               type="monotone"
               dataKey="value"
