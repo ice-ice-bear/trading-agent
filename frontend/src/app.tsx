@@ -12,6 +12,7 @@ import ResearchView from '@/components/research/research-view'
 import ReportsView from '@/components/reports/reports-view'
 import SettingsView from '@/components/settings/settings-view'
 import ActivityPanel from '@/components/agent-activity/activity-panel'
+import CommandPalette from '@/components/layout/command-palette'
 
 export default function App() {
   const { theme, toggleTheme } = useTheme()
@@ -20,7 +21,6 @@ export default function App() {
   const [currentView, setCurrentView] = useState<AppView>('dashboard')
   const [mcpConnected, setMcpConnected] = useState(false)
   const [mcpToolsCount, setMcpToolsCount] = useState(0)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [cmdkOpen, setCmdkOpen] = useState(false)
 
   useEffect(() => {
@@ -76,6 +76,7 @@ export default function App() {
       >
         {renderView()}
       </MainLayout>
+      <CommandPalette open={cmdkOpen} onClose={() => setCmdkOpen(false)} onNavigate={setCurrentView} />
     </div>
   )
 }
