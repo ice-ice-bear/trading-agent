@@ -207,7 +207,7 @@ export interface Report {
   agent_id: string;
 }
 
-export type AppView = 'settings' | 'dashboard' | 'agents' | 'reports' | 'stockinfo';
+export type AppView = 'dashboard' | 'signals' | 'research' | 'reports' | 'settings'
 
 // --- Report Summary types ---
 

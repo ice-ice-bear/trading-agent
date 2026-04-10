@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { AppSettings } from '../types';
-import { getSettings, updateSettings } from '../services/api';
+import type { AppSettings } from '@/types';
+import { getSettings, updateSettings } from '@/services/api';
 
 const DEFAULTS: AppSettings = {
   trading_mode: 'demo',

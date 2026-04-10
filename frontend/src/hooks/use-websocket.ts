@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { AgentEvent } from '../types';
+import type { AgentEvent } from '@/types';
 
 interface UseWebSocketReturn {
   connected: boolean;
