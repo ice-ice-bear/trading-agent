@@ -14,7 +14,9 @@ export default function RecentOrders({ refreshTrigger = 0 }: { refreshTrigger?: 
     <div className="bg-surface border border-border rounded-xl overflow-hidden">
       <div className="flex items-center justify-between px-[18px] py-3.5 border-b border-border-light">
         <h3 className="text-[13px] font-bold uppercase tracking-wider">Recent Orders</h3>
-        <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{orders.length}</span>
+        <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+          {orders.filter(o => new Date(o.timestamp).toDateString() === new Date().toDateString()).length} today
+        </span>
       </div>
       {orders.length === 0 ? (
         <div className="p-6 text-center text-sm text-muted-foreground">No orders yet</div>

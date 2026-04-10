@@ -4,26 +4,32 @@ import { cn } from '@/lib/utils'
 
 type Period = '1W' | '1M' | '3M'
 
+const PERIOD_MAP: Record<Period, string> = { '1W': '7d', '1M': '30d', '3M': '90d' }
+
 interface PerfData {
   date: string
-  value: number
-  returns_pct: number
+  total_value: number
 }
 
 export default function PerformanceChart() {
   const [period, setPeriod] = useState<Period>('1W')
   const [data, setData] = useState<PerfData[]>([])
+  const [returnsPct, setReturnsPct] = useState(0)
+  const [maxDrawdown, setMaxDrawdown] = useState(0)
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
 
   useEffect(() => {
-    fetch(`/api/dashboard/performance?period=${period.toLowerCase()}`)
-      .then(r => r.ok ? r.json() : { snapshots: [] })
-      .then(d => setData(d.snapshots || []))
-      .catch(() => setData([]))
+    fetch(`/api/dashboard/performance?period=${PERIOD_MAP[period]}`)
+      .then(r => r.ok ? r.json() : { chart_data: [], returns_pct: 0, max_drawdown: 0 })
+      .then(d => {
+        setData(d.chart_data || d.snapshots || [])
+        setReturnsPct(d.returns_pct ?? 0)
+        setMaxDrawdown(d.max_drawdown ?? 0)
+      })
+      .catch(() => { setData([]); setReturnsPct(0); setMaxDrawdown(0) })
   }, [period])
 
-  const lastReturns = data.length > 0 ? data[data.length - 1].returns_pct : 0
-  const isPositive = lastReturns >= 0
+  const isPositive = returnsPct >= 0
 
   return (
     <div className="bg-surface border border-border rounded-xl overflow-hidden">
@@ -65,7 +71,7 @@ export default function PerformanceChart() {
             }} />
             <Area
               type="monotone"
-              dataKey="value"
+              dataKey="total_value"
               stroke={isPositive ? '#22c55e' : '#ef4444'}
               strokeWidth={2}
               fill="url(#perfGrad)"
@@ -73,7 +79,9 @@ export default function PerformanceChart() {
           </AreaChart>
         </ResponsiveContainer>
         <div className="flex gap-5 mt-2 text-xs">
-          <span>Returns: <strong className={isPositive ? 'text-success' : 'text-error'}>{isPositive ? '+' : ''}{lastReturns.toFixed(2)}%</strong></span>
+          <span>Returns: <strong className={isPositive ? 'text-success' : 'text-error'}>{isPositive ? '+' : ''}{returnsPct.toFixed(2)}%</strong></span>
+          <span>Sharpe: <strong>--</strong></span>
+          <span>Max DD: <strong className="text-error">{maxDrawdown > 0 ? `-${maxDrawdown.toFixed(1)}%` : '0%'}</strong></span>
         </div>
       </div>
     </div>

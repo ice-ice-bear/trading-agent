@@ -24,13 +24,13 @@ export default function ActivityPanel({ events, wsConnected }: ActivityPanelProp
         </h3>
         <span className="text-[11px] text-muted-foreground">Live</span>
       </div>
-      <div className="flex px-4 border-b border-border shrink-0">
+      <div className="flex gap-1 px-4 border-b border-border shrink-0">
         {(['timeline', 'agents', 'decisions'] as PanelTab[]).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={cn(
-              'px-3 py-2 text-xs font-medium border-b-2 transition-colors capitalize',
+              'px-3.5 py-2.5 text-xs font-medium border-b-2 transition-colors capitalize',
               tab === t ? 'text-primary border-primary font-semibold' : 'text-muted-foreground border-transparent hover:text-foreground'
             )}
           >
