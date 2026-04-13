@@ -18,8 +18,23 @@ const GRADE_STYLES: Record<string, string> = {
   D: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
 }
 
+function formatSignalDate(ts: string) {
+  const d = new Date(ts)
+  const now = new Date()
+  const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
+  const dayDiff = Math.round((startOf(now) - startOf(d)) / 86400000)
+  const time = d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
+  if (dayDiff === 0) return { pill: 'Today', full: `Today ${time}` }
+  if (dayDiff === 1) return { pill: 'Yesterday', full: `Yesterday ${time}` }
+  const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]
+  const md = `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`
+  return { pill: md, full: `${md} (${dow}) ${time}` }
+}
+
 export default function SignalCardNew({ signal }: { signal: Signal }) {
   const grade = signal.confidence_grades?.overall || (signal.confidence >= 0.8 ? 'A' : signal.confidence >= 0.6 ? 'B' : 'C')
+  const dateInfo = formatSignalDate(signal.timestamp)
+  const isToday = dateInfo.pill === 'Today'
 
   return (
     <div className="bg-surface border border-border rounded-xl p-[18px] mb-3 cursor-pointer hover:border-primary hover:shadow-md hover:shadow-primary/5 transition-all">
@@ -38,6 +53,12 @@ export default function SignalCardNew({ signal }: { signal: Signal }) {
           </div>
         </div>
         <div className="flex items-center gap-1.5">
+          <span className={cn(
+            'px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold tabular-nums',
+            isToday ? 'bg-primary-light text-primary' : 'bg-muted text-muted-foreground'
+          )}>
+            {dateInfo.pill}
+          </span>
           <span className={cn('px-2 py-0.5 rounded text-[11px] font-semibold', STATUS_STYLES[signal.status] || '')}>
             {signal.status.charAt(0).toUpperCase() + signal.status.slice(1)}
           </span>
@@ -71,9 +92,10 @@ export default function SignalCardNew({ signal }: { signal: Signal }) {
 
       {/* Footer */}
       <div className="flex justify-between items-center pt-2.5 border-t border-border-light text-xs text-muted-foreground">
-        <span>
-          {new Date(signal.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })} KST
-          {signal.investment_horizon && <> &middot; {signal.investment_horizon}</>}
+        <span className="tabular-nums">
+          <span className={cn('font-semibold', isToday ? 'text-primary' : 'text-foreground')}>{dateInfo.full}</span>
+          <span className="text-muted-foreground"> KST</span>
+          {signal.investment_horizon && <span className="text-muted-foreground"> &middot; {signal.investment_horizon}</span>}
         </span>
       </div>
     </div>

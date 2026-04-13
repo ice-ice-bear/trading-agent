@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { createChart, type IChartApi } from 'lightweight-charts'
+import { createChart, AreaSeries, type IChartApi } from 'lightweight-charts'
 
 interface PriceChartProps {
   stockCode: string
@@ -31,7 +31,7 @@ export default function PriceChart({ stockCode }: PriceChartProps) {
     })
     chartRef.current = chart
 
-    const series = chart.addAreaSeries({
+    const series = chart.addSeries(AreaSeries, {
       lineColor: '#4f46e5',
       topColor: 'rgba(79, 70, 229, 0.15)',
       bottomColor: 'rgba(79, 70, 229, 0)',
