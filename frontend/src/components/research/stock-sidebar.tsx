@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
-import type { WatchlistItem } from '@/types'
-import { getWatchlist, addToWatchlist, removeFromWatchlist } from '@/services/api'
+import type { WatchlistItem, SearchResult } from '@/types'
+import { getWatchlist, addToWatchlist, removeFromWatchlist, searchStocks } from '@/services/api'
 
 interface StockSidebarProps {
   selectedCode: string | null
@@ -11,39 +11,73 @@ interface StockSidebarProps {
 export default function StockSidebar({ selectedCode, onSelect }: StockSidebarProps) {
   const [items, setItems] = useState<WatchlistItem[]>([])
   const [search, setSearch] = useState('')
+  const [results, setResults] = useState<SearchResult[]>([])
+  const [searching, setSearching] = useState(false)
+
+  const refresh = () => getWatchlist().then(d => setItems(d.items)).catch(() => {})
+
+  useEffect(() => { refresh() }, [])
 
   useEffect(() => {
-    getWatchlist().then(d => setItems(d.items)).catch(() => {})
-  }, [])
+    const q = search.trim()
+    if (q.length < 1) { setResults([]); return }
+    setSearching(true)
+    const t = setTimeout(() => {
+      searchStocks(q)
+        .then(r => setResults(r.results))
+        .catch(() => setResults([]))
+        .finally(() => setSearching(false))
+    }, 250)
+    return () => clearTimeout(t)
+  }, [search])
 
-  const handleAdd = async () => {
-    if (!search.trim()) return
-    await addToWatchlist(search.trim())
+  const pickStock = async (code: string, name: string) => {
+    onSelect(code, name)
+    if (!items.some(it => it.stock_code === code)) {
+      await addToWatchlist(code, name)
+      refresh()
+    }
     setSearch('')
-    getWatchlist().then(d => setItems(d.items)).catch(() => {})
+    setResults([])
   }
 
   const handleRemove = async (code: string) => {
     await removeFromWatchlist(code)
-    getWatchlist().then(d => setItems(d.items)).catch(() => {})
+    refresh()
   }
 
   return (
     <div className="w-[260px] shrink-0 bg-surface border border-border rounded-xl overflow-hidden flex flex-col">
-      <div className="p-3 border-b border-border">
-        <div className="flex gap-1.5">
-          <input
-            className="flex-1 px-3 py-2 text-[13px] border border-border rounded-md bg-muted text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-            placeholder="Search stocks..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleAdd()}
-          />
-          <button
-            onClick={handleAdd}
-            className="px-2.5 py-2 text-xs font-bold bg-primary text-white rounded-md hover:bg-primary/90"
-          >+</button>
-        </div>
+      <div className="p-3 border-b border-border relative">
+        <input
+          className="w-full px-3 py-2 text-[13px] border border-border rounded-md bg-muted text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+          placeholder="종목명 또는 코드 (예: 전자, 005930)"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        {search.trim().length >= 1 && (
+          <div className="absolute left-3 right-3 top-[calc(100%-4px)] z-10 bg-surface border border-border rounded-md shadow-lg max-h-[280px] overflow-y-auto">
+            {searching && results.length === 0 ? (
+              <div className="px-3 py-2 text-xs text-muted-foreground">검색 중...</div>
+            ) : results.length === 0 ? (
+              <div className="px-3 py-2 text-xs text-muted-foreground">결과 없음</div>
+            ) : (
+              results.map(r => (
+                <button
+                  key={r.stock_code}
+                  onClick={() => pickStock(r.stock_code, r.stock_name)}
+                  className="w-full text-left px-3 py-2 hover:bg-muted flex items-center justify-between gap-2 border-b border-border-light last:border-0"
+                >
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-semibold truncate">{r.stock_name}</div>
+                    <div className="text-[11px] text-muted-foreground font-mono">{r.stock_code}</div>
+                  </div>
+                  {r.market && <span className="text-[10px] text-muted-foreground shrink-0">{r.market}</span>}
+                </button>
+              ))
+            )}
+          </div>
+        )}
       </div>
       <div className="px-3 pt-2 pb-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Watchlist</div>
       <div className="flex-1 overflow-y-auto px-1">
