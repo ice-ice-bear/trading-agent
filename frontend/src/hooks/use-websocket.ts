@@ -17,6 +17,19 @@ export function useWebSocket(): UseWebSocketReturn {
   useEffect(() => {
     let unmounted = false;
 
+    fetch('/api/agents/events?limit=100')
+      .then((r) => r.json())
+      .then((payload: { events?: AgentEvent[] }) => {
+        if (unmounted || !payload?.events) return;
+        const history = [...payload.events].reverse();
+        setEvents((prev) => {
+          const seen = new Set(prev.map((e) => `${e.timestamp}-${e.event_type}-${e.agent_id}`));
+          const merged = [...history.filter((e) => !seen.has(`${e.timestamp}-${e.event_type}-${e.agent_id}`)), ...prev];
+          return merged.slice(-100);
+        });
+      })
+      .catch(() => {});
+
     function connect() {
       if (unmounted) return;
 
