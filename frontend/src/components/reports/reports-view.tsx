@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { Report } from '@/types'
-import { getReports } from '@/services/api'
+import { getReports, getReport } from '@/services/api'
 import ReportList from './report-list'
 import ReportReader from './report-reader'
 
 export default function ReportsView() {
   const [reports, setReports] = useState<Report[]>([])
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [selected, setSelected] = useState<Report | null>(null)
   const [filter, setFilter] = useState('all')
 
   useEffect(() => {
@@ -17,7 +18,12 @@ export default function ReportsView() {
     }).catch(() => {})
   }, [filter])
 
-  const selected = reports.find(r => r.id === selectedId)
+  useEffect(() => {
+    if (selectedId == null) { setSelected(null); return }
+    let cancelled = false
+    getReport(selectedId).then(r => { if (!cancelled) setSelected(r) }).catch(() => {})
+    return () => { cancelled = true }
+  }, [selectedId])
 
   return (
     <div>
