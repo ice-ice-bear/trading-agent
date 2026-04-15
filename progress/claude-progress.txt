@@ -1,0 +1,4 @@
+# Claude Progress
+## Session 1
+- HarnessKit initialized
+- No features implemented yet
