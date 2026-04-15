@@ -29,13 +29,47 @@ _RANKS_TTL = 300  # seconds
 
 
 @router.get("/search")
-async def search_stocks(q: str = Query(..., min_length=2)):
-    """Search stocks by name or code via MCP find_stock_code.
+async def search_stocks(q: str = Query(..., min_length=1)):
+    """Search stocks by name or code.
 
-    MCP find_stock_code expects {"stock_name": "..."} and returns a single
-    match: {"ok": True, "data": {"stock_code": "...", "stock_name_found": "..."}}.
-    We wrap the single result into a list for the frontend.
+    Primary: substring match against local kospi200_components (instant,
+    multi-result — handles queries like "전자" → 삼성전자/LG전자, or code prefix).
+    Fallback: MCP find_stock_code (exact name) for names outside KOSPI200.
     """
+    from app.models.db import execute_query
+
+    query = q.strip()
+    results: list[dict] = []
+    seen: set[str] = set()
+
+    try:
+        like = f"%{query}%"
+        rows = await execute_query(
+            """SELECT stock_code, stock_name, sector FROM kospi200_components
+               WHERE stock_name LIKE ? OR stock_code LIKE ?
+               ORDER BY CASE WHEN stock_code = ? THEN 0
+                             WHEN stock_name = ? THEN 1
+                             WHEN stock_name LIKE ? THEN 2
+                             ELSE 3 END, stock_name
+               LIMIT 20""",
+            (like, like, query, query, f"{query}%"),
+        )
+        for row in rows or []:
+            r = dict(row)
+            if r["stock_code"] in seen:
+                continue
+            seen.add(r["stock_code"])
+            results.append({
+                "stock_code": r["stock_code"],
+                "stock_name": r["stock_name"],
+                "market": r.get("sector", ""),
+            })
+    except Exception as e:
+        logger.warning(f"Local stock search failed for q={query}: {e}")
+
+    if len(query) < 2 or results:
+        return {"results": results}
+
     try:
         raw = await mcp_manager.call_tool(
             "domestic_stock",
@@ -60,31 +94,30 @@ async def search_stocks(q: str = Query(..., min_length=2)):
         else:
             data = {}
 
-        results = []
-
         # MCP returns {"ok": True, "data": {"stock_code": ..., "stock_name_found": ...}}
         if isinstance(data, dict) and data.get("ok"):
             inner = data.get("data", {})
-            if inner.get("found") and inner.get("stock_code"):
+            if inner.get("found") and inner.get("stock_code") and inner["stock_code"] not in seen:
                 results.append({
                     "stock_code": inner["stock_code"],
-                    "stock_name": inner.get("stock_name_found", q),
+                    "stock_name": inner.get("stock_name_found", query),
                     "market": inner.get("ex", ""),
                 })
-        # Fallback: if data is a list (future-proofing)
         elif isinstance(data, list):
             for item in data[:20]:
                 if isinstance(item, dict):
-                    results.append({
-                        "stock_code": item.get("stock_code", item.get("code", "")),
-                        "stock_name": item.get("stock_name", item.get("name", "")),
-                        "market": item.get("market", ""),
-                    })
+                    code = item.get("stock_code", item.get("code", ""))
+                    if code and code not in seen:
+                        results.append({
+                            "stock_code": code,
+                            "stock_name": item.get("stock_name", item.get("name", "")),
+                            "market": item.get("market", ""),
+                        })
 
         return {"results": results}
     except Exception as e:
-        logger.warning(f"Stock search failed for q={q}: {e}")
-        return {"results": []}
+        logger.warning(f"MCP stock search failed for q={query}: {e}")
+        return {"results": results}
 
 
 @router.get("/ranks")
