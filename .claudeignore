@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.vite/
+coverage/
+*.tsbuildinfo
+__pycache__/
+*.pyc
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+htmlcov/
+*.egg-info/
+.logs/
+.harnesskit/session-logs/
+.harnesskit/backup/
