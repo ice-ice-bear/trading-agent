@@ -81,6 +81,12 @@ class BaseAgent:
         self._events_emitted = []
         start = time.monotonic()
 
+        await self.emit_event("agent.started", {
+            "trigger": context.trigger,
+            "agent_name": self.name,
+            "role": self.role.value,
+        })
+
         try:
             result = await self.execute(context)
             result.events_emitted = self._events_emitted
@@ -89,6 +95,12 @@ class BaseAgent:
             self.last_run = time.strftime("%Y-%m-%dT%H:%M:%S")
 
             await self._log_execution(elapsed, result)
+            await self.emit_event("agent.completed", {
+                "agent_name": self.name,
+                "role": self.role.value,
+                "summary": result.summary[:200],
+                "duration_ms": elapsed,
+            })
             logger.info(
                 f"Agent {self.agent_id} completed in {elapsed}ms: {result.summary}"
             )
@@ -104,6 +116,12 @@ class BaseAgent:
                 events_emitted=self._events_emitted,
             )
             await self._log_execution(elapsed, error_result)
+            await self.emit_event("agent.failed", {
+                "agent_name": self.name,
+                "role": self.role.value,
+                "error": str(e)[:200],
+                "duration_ms": elapsed,
+            })
             logger.error(f"Agent {self.agent_id} error: {e}", exc_info=True)
             return error_result
 
